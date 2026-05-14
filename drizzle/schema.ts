@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, boolean, jsonb, date, primaryKey, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, boolean, jsonb, date, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -25,15 +25,16 @@ export const matches = pgTable('matches', {
 }, (t) => ({ modeEndedAt: index('matches_mode_ended_idx').on(t.mode, t.endedAt) }));
 
 export const matchParticipants = pgTable('match_participants', {
+  id: uuid('id').primaryKey().defaultRandom(),
   matchId: uuid('match_id').notNull().references(() => matches.id),
-  userId: uuid('user_id').references(() => users.id),
-  botDifficulty: text('bot_difficulty'),         // null = real user
+  userId: uuid('user_id').references(() => users.id),         // null for bots
+  botDifficulty: text('bot_difficulty'),                       // null = real user
   finalFloor: integer('final_floor'),
   finalScore: integer('final_score'),
   maxCombo: integer('max_combo'),
   coinsEarned: integer('coins_earned'),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.matchId, t.userId] }),
+  matchUserUq: uniqueIndex('match_participants_match_user_uq').on(t.matchId, t.userId),
   userIdx: index('match_participants_user_idx').on(t.userId, t.matchId),
 }));
 
