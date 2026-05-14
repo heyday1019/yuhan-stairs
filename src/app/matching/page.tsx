@@ -1,8 +1,8 @@
 'use client';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function MatchingPage() {
+function MatchingInner() {
   const router = useRouter();
   const params = useSearchParams();
   const mode = Number(params.get('mode') ?? '100');
@@ -22,11 +22,25 @@ export default function MatchingPage() {
   }, [mode, router]);
 
   return (
+    <div className="text-center">
+      <div className="mb-2 animate-pulse text-2xl font-bold">매칭 중…</div>
+      <div className="text-xs opacity-70">1.5초 후 AI 봇과 매치됩니다 (M1)</div>
+    </div>
+  );
+}
+
+export default function MatchingPage() {
+  return (
     <main className="flex min-h-dvh items-center justify-center bg-slate-950 text-white">
-      <div className="text-center">
-        <div className="mb-2 animate-pulse text-2xl font-bold">매칭 중…</div>
-        <div className="text-xs opacity-70">1.5초 후 AI 봇과 매치됩니다 (M1)</div>
-      </div>
+      <Suspense
+        fallback={
+          <div className="text-center">
+            <div className="mb-2 animate-pulse text-2xl font-bold">매칭 중…</div>
+          </div>
+        }
+      >
+        <MatchingInner />
+      </Suspense>
     </main>
   );
 }
