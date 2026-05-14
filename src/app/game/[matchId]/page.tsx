@@ -10,6 +10,7 @@ import { startBotLoop } from '@/game/loop';
 import { renderVisibleStairs } from '@/game/renderers/stair';
 import { createPlayer } from '@/game/renderers/player';
 import { setCameraToFloor } from '@/game/camera';
+import { flashCombo, showFailPopup } from '@/game/renderers/effects';
 import type { Application } from 'pixi.js';
 import { Container } from 'pixi.js';
 
@@ -59,8 +60,10 @@ export default function GamePage() {
     let stairsRendered = false;
     const player = createPlayer();
     world.addChild(player.container);
+    let lastFailCount = 0;
+    let lastCombo = 0;
     app.ticker.add(() => {
-      const { stairs: curStairs, playerFloor: curFloor } = useGame.getState();
+      const { stairs: curStairs, playerFloor: curFloor, failCount, combo } = useGame.getState();
       if (curStairs.length === 0) return;
       if (!stairsRendered) {
         renderVisibleStairs(world, curStairs, Math.max(1, curFloor));
@@ -74,6 +77,14 @@ export default function GamePage() {
         player.container.y = -(stair.floor - 1) * 50 - 22;
         player.setFlipped(stair.dir === 'L');
       }
+      if (failCount > lastFailCount) {
+        showFailPopup(app.stage, 160, 200);
+        lastFailCount = failCount;
+      }
+      if (combo.combo > lastCombo && combo.combo % 5 === 0) {
+        flashCombo(app.stage, combo.combo);
+      }
+      lastCombo = combo.combo;
     });
   }, []);
 
