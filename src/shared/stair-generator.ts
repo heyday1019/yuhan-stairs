@@ -12,6 +12,12 @@ import type { Stair, Direction } from './types';
 // Run-length weights: prefer 2-3 (most common), 1/4/5 less frequent.
 const RUN_WEIGHTS = [0, 1, 3, 3, 2, 1]; // index 0 unused
 
+// Diagonal-zigzag X layout: stairs drift across the screen step by step.
+const STAIR_X_MIN = 0;
+const STAIR_X_MAX = 240; // canvas (360) - stair width (120)
+const STAIR_X_STEP = 50;
+const STAIR_X_START = 120;
+
 function pickRunLength(rng: ReturnType<typeof createRng>): number {
   const total = RUN_WEIGHTS.reduce((a, b) => a + b, 0);
   const r = rng.next() * total;
@@ -29,6 +35,7 @@ export function generateStairs(seed: string, count: number): Stair[] {
   let dir: Direction = rng.next() < 0.5 ? 'L' : 'R';
   let remaining = pickRunLength(rng);
   let justSwitched = false;
+  let curX = STAIR_X_START;
 
   for (let floor = 1; floor <= count; floor++) {
     if (remaining === 0) {
@@ -36,6 +43,9 @@ export function generateStairs(seed: string, count: number): Stair[] {
       remaining = pickRunLength(rng);
       justSwitched = true;
     }
+    curX = dir === 'R'
+      ? Math.min(STAIR_X_MAX, curX + STAIR_X_STEP)
+      : Math.max(STAIR_X_MIN, curX - STAIR_X_STEP);
     // Booster: base rate, +1.5x weight right after direction switch
     const boosterChance = BOOSTER_SPAWN_RATE * (justSwitched ? 1.5 : 1.0);
     const isBooster = rng.chance(boosterChance);
@@ -43,7 +53,7 @@ export function generateStairs(seed: string, count: number): Stair[] {
     const hasFreeItem = !isBooster && !hasCoin && rng.chance(FREE_ITEM_SPAWN_RATE);
     const hasItem = hasFreeItem ? ITEM_IDS[rng.nextInt(0, ITEM_IDS.length - 1)] : undefined;
 
-    stairs.push({ floor, dir, hasCoin, hasItem, isBooster });
+    stairs.push({ floor, dir, x: curX, hasCoin, hasItem, isBooster });
     remaining--;
     justSwitched = false;
   }

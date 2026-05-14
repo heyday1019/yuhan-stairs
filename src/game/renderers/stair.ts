@@ -2,16 +2,13 @@ import { Container, Graphics, Text } from 'pixi.js';
 import type { Stair } from '@/shared/types';
 import { FLOOR_HEIGHT } from '../camera';
 
-const LEFT_X = 60;
-const RIGHT_X = 240;
 const STAIR_W = 120;
 const STAIR_H = 22;
 
 export function renderStair(world: Container, stair: Stair): Container {
   const node = new Container();
-  const x = stair.dir === 'L' ? LEFT_X : RIGHT_X;
   const y = -(stair.floor - 1) * FLOOR_HEIGHT;
-  node.x = x;
+  node.x = stair.x;
   node.y = y;
 
   const shadow = new Graphics()

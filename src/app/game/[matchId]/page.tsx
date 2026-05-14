@@ -74,7 +74,7 @@ export default function GamePage() {
       setCameraToFloor(world, anchorFloor);
       const stair = curStairs[anchorFloor - 1];
       if (stair) {
-        player.container.x = (stair.dir === 'L' ? 60 : 240) + 60;
+        player.container.x = stair.x + 60;
         player.container.y = -(stair.floor - 1) * 50 - 22;
         player.setFlipped(stair.dir === 'L');
       }

@@ -5,6 +5,7 @@ export type Direction = 'L' | 'R';
 export interface Stair {
   floor: number;             // 1-based
   dir: Direction;
+  x: number;                 // world-space x of stair left edge (px)
   hasCoin: boolean;
   hasItem?: ItemId;
   isBooster: boolean;
