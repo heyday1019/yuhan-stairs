@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { PixiCanvas } from '@/components/PixiCanvas';
 import { Hud } from '@/components/Hud';
 import { InputOverlay } from '@/components/InputOverlay';
+import { ControlPad } from '@/components/ControlPad';
 import { useGame } from '@/game/store';
 import { generateStairs } from '@/shared/stair-generator';
 import { startBotLoop } from '@/game/loop';
@@ -93,6 +94,7 @@ export default function GamePage() {
       <Hud />
       <PixiCanvas width={360} height={780} onReady={onPixiReady} />
       <InputOverlay />
+      <ControlPad />
     </main>
   );
 }
