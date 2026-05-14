@@ -11,5 +11,8 @@ coverage/
 drizzle/migrations/meta/
 # next.js
 build/
+
+# Local planning/spec scratchpads (not part of the repo)
+docs/superpowers/plans/
 *.tsbuildinfo
 *.pem
