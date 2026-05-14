@@ -45,15 +45,12 @@ export const useGame = create<GameState>((set, get) => ({
     const next = s.stairs[s.playerFloor];           // next stair to climb (1-based via playerFloor as index)
     if (!next) return;
     if (next.dir === dir) {
-      // success
+      // success: +1 floor, plus coin rewards. No auto-jumps.
       let coinsCollected = s.coinsCollected + (next.hasCoin ? 1 : 0);
-      let playerFloor = s.playerFloor + 1;
-      if (next.isBooster) {
-        const jump = 2 + Math.floor(Math.random() * 2);  // 2 or 3
-        playerFloor = Math.min(s.goalFloor, playerFloor + jump);
-        set({ inputLockedUntil: atMs + 400 });
-      }
+      if (next.isBooster) coinsCollected += 3;          // booster stair: bonus coins instead of skip-jump
+      const playerFloor = s.playerFloor + 1;
       const combo = onCorrectTap(s.combo, atMs);
+      if (combo.combo > 0 && combo.combo % 5 === 0) coinsCollected += 1;  // combo milestone reward
       set({ playerFloor, combo, coinsCollected });
       if (playerFloor >= s.goalFloor) get().end('reached_goal');
     } else {
