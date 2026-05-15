@@ -22,25 +22,47 @@ function MatchingInner() {
       const me = await meRes.json();
       if (cancelled) return;
 
-      const enqueueRes = await apiFetch('/api/matchmaking/enqueue', { method: 'POST', body: JSON.stringify({ mode }) });
-      const enqueue = await enqueueRes.json();
-      if (cancelled) return;
-
-      if (enqueue.status === 'paired' || enqueue.status === 'already_in_match') {
-        goneRef.current = true;
-        router.push(`/game/${enqueue.matchId}?mode=${mode}&type=ranked`);
-        return;
-      }
-
+      // Subscribe FIRST and wait for the channel to be live so we never miss
+      // a match_ready event triggered between enqueue and subscription.
       const channel = subscribePrivateUser(me.id);
       channel.bind('match_ready', (data: { matchId: string }) => {
         if (goneRef.current) return;
         goneRef.current = true;
         router.push(`/game/${data.matchId}?mode=${mode}&type=ranked`);
       });
-      const tick = setInterval(() => setSecondsLeft((s) => Math.max(0, s - 1)), 1000);
-      const fallback = setTimeout(() => { if (!goneRef.current) goBot(); }, FALLBACK_MS);
-      cleanup = () => { clearInterval(tick); clearTimeout(fallback); channel.unbind_all(); channel.unsubscribe(); };
+      await new Promise<void>((resolve) => {
+        let done = false;
+        const fin = () => { if (!done) { done = true; resolve(); } };
+        channel.bind('pusher:subscription_succeeded', fin);
+        channel.bind('pusher:subscription_error', fin);
+        setTimeout(fin, 3000);
+      });
+      if (cancelled) return;
+
+      const enqueueRes = await apiFetch('/api/matchmaking/enqueue', { method: 'POST', body: JSON.stringify({ mode }) });
+      const enqueue = await enqueueRes.json();
+      if (cancelled) return;
+
+      if (enqueue.status === 'paired' || enqueue.status === 'already_in_match') {
+        if (!goneRef.current) {
+          goneRef.current = true;
+          router.push(`/game/${enqueue.matchId}?mode=${mode}&type=ranked`);
+        }
+        return;
+      }
+
+      // rAF-driven deadline timer — robust against Android Chrome setInterval throttling.
+      const deadline = performance.now() + FALLBACK_MS;
+      let raf = 0;
+      const tickTimer = () => {
+        const remaining = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+        setSecondsLeft(remaining);
+        if (goneRef.current) return;
+        if (performance.now() >= deadline) { goBot(); return; }
+        raf = requestAnimationFrame(tickTimer);
+      };
+      raf = requestAnimationFrame(tickTimer);
+      cleanup = () => { cancelAnimationFrame(raf); channel.unbind_all(); channel.unsubscribe(); };
     })();
     return () => { cancelled = true; cleanup?.(); };
   }, [mode, router]);
