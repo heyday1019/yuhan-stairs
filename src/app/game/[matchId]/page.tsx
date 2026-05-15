@@ -11,7 +11,7 @@ import { useGame } from '@/game/store';
 import { generateStairs } from '@/shared/stair-generator';
 import { createBotAdapter } from '@/game/sync/bot-adapter';
 import { createNetworkAdapter } from '@/game/sync/network-adapter';
-import { renderVisibleStairs } from '@/game/renderers/stair';
+import { renderStair } from '@/game/renderers/stair';
 import { createPlayer } from '@/game/renderers/player';
 import { setCameraToFloor } from '@/game/camera';
 import { flashCombo, showFailPopup } from '@/game/renderers/effects';
@@ -122,7 +122,7 @@ export default function GamePage() {
   const onPixiReady = useCallback((app: Application) => {
     const world = new Container();
     app.stage.addChild(world);
-    let stairsRendered = false;
+    const stairContainers = new Map<number, Container>();
     const player = createPlayer();
     world.addChild(player.container);
     let lastFailCount = 0;
@@ -130,8 +130,12 @@ export default function GamePage() {
     app.ticker.add(() => {
       const { stairs: curStairs, playerFloor: curFloor, failCount, combo } = useGame.getState();
       if (curStairs.length === 0) return;
-      if (!stairsRendered) { renderVisibleStairs(world, curStairs, Math.max(1, curFloor)); stairsRendered = true; }
       const anchorFloor = Math.max(1, curFloor);
+      const lo = Math.max(1, anchorFloor - 5);
+      const hi = Math.min(curStairs.length, anchorFloor + 15);
+      for (let f = lo; f <= hi; f++) {
+        if (!stairContainers.has(f)) stairContainers.set(f, renderStair(world, curStairs[f - 1]));
+      }
       setCameraToFloor(world, anchorFloor);
       const stair = curStairs[anchorFloor - 1];
       if (stair) {
