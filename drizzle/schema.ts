@@ -19,9 +19,11 @@ export const matches = pgTable('matches', {
   matchType: text('match_type').notNull(),       // 'ranked' | 'friend' | 'bot'
   status: text('status').notNull(),              // 'pending' | 'active' | 'ended' | 'abandoned'
   startedAt: timestamp('started_at', { withTimezone: true }),
+  matchStartedAt: timestamp('match_started_at', { withTimezone: true }),
   endedAt: timestamp('ended_at', { withTimezone: true }),
   winnerUserId: uuid('winner_user_id'),
   flagged: boolean('flagged').notNull().default(false),
+  flaggedCount: integer('flagged_count').notNull().default(0),
 }, (t) => ({ modeEndedAt: index('matches_mode_ended_idx').on(t.mode, t.endedAt) }));
 
 export const matchParticipants = pgTable('match_participants', {
