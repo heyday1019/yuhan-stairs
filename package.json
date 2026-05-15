@@ -19,9 +19,12 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "@upstash/redis": "^1.32.0",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.6",
     "pixi.js": "^8.18.1",
+    "pusher": "^5.2.0",
+    "pusher-js": "^8.4.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3",
