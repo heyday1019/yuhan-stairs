@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGame } from '@/game/store';
+import { apiFetch } from '@/lib/match-network';
 
 interface EndResp { score: number; won: boolean; rewardCoins: number; pickupCoins: number; totalDelta: number; }
 
@@ -13,9 +14,8 @@ export default function ResultPage() {
 
   useEffect(() => {
     if (!game.matchId || !game.endedReason) return;
-    fetch(`/api/matches/${params.matchId}/end`, {
+    apiFetch(`/api/matches/${params.matchId}/end`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         finalFloor: game.playerFloor,
         maxCombo: game.combo.maxCombo,
