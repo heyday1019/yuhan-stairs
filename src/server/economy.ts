@@ -4,6 +4,14 @@ import { computeCoinReward, computeFinalScore } from '@/shared/scoring';
 import type { Mode } from '@/shared/constants';
 import type { FinalResult } from '@/shared/types';
 
+export function computeRankedPayout(mode: number, reason: 'normal' | 'opponent_disconnect' = 'normal'): { winner: number; loser: number } {
+  const table: Record<number, { winner: number; loser: number }> = {
+    100: { winner: 30, loser: 5 },
+  };
+  const base = table[mode] ?? { winner: 0, loser: 0 };
+  return reason === 'opponent_disconnect' ? { winner: base.winner, loser: 0 } : base;
+}
+
 export async function finalizeBotMatch(args: {
   matchId: string;
   userId: string;

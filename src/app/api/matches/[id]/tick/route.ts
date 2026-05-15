@@ -7,6 +7,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { generateStairs } from '@/shared/stair-generator';
 import { validateTick, type ValidatorState } from '@/server/tick-validator';
 import { clearMatchLookup } from '@/server/matchmaking';
+import { computeRankedPayout } from '@/server/economy';
 import type { Stair } from '@/shared/types';
 
 const stairsCache = new Map<string, Stair[]>();
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
             clearMatchLookup(r, opponent.userId),
             pusher.trigger(`presence-match-${matchId}`, 'match_ended', { reason: 'opponent_disconnect', winnerUserId: user.id }),
           ]);
-          await payoutDisconnectWin(matchId, user.id, opponent.userId);
+          await payoutDisconnectWin(matchId, user.id, opponent.userId, match.mode);
           return NextResponse.json({ ok: true, ended: 'opponent_disconnect' });
         }
         await pusher.trigger(`presence-match-${matchId}`, 'opponent_disconnected_grace', { userId: opponent.userId, remainingMs: DISCONNECT_GRACE_MS - elapsedDisc });
@@ -93,14 +94,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 }
 
-async function payoutDisconnectWin(matchId: string, winnerId: string, loserId: string) {
+async function payoutDisconnectWin(matchId: string, winnerId: string, loserId: string, mode: number) {
+  const payout = computeRankedPayout(mode, 'opponent_disconnect');
   await db.transaction(async (tx) => {
     await tx.insert(schema.transactions).values([
-      { userId: winnerId, type: 'match_reward', deltaCoins: 30, metadata: { matchId, role: 'winner_disconnect' } },
-      { userId: loserId, type: 'match_reward', deltaCoins: 0, metadata: { matchId, role: 'loser_disconnect' } },
+      { userId: winnerId, type: 'match_reward', deltaCoins: payout.winner, metadata: { matchId, role: 'winner_disconnect' } },
+      { userId: loserId, type: 'match_reward', deltaCoins: payout.loser, metadata: { matchId, role: 'loser_disconnect' } },
     ]);
-    await tx.execute(sql`update users set coins = coins + 30 where id = ${winnerId}`);
-    await tx.update(schema.matchParticipants).set({ coinsEarned: 30 }).where(and(eq(schema.matchParticipants.matchId, matchId), eq(schema.matchParticipants.userId, winnerId)));
-    await tx.update(schema.matchParticipants).set({ coinsEarned: 0 }).where(and(eq(schema.matchParticipants.matchId, matchId), eq(schema.matchParticipants.userId, loserId)));
+    await tx.update(schema.matchParticipants).set({ coinsEarned: payout.winner }).where(and(eq(schema.matchParticipants.matchId, matchId), eq(schema.matchParticipants.userId, winnerId)));
+    await tx.update(schema.matchParticipants).set({ coinsEarned: payout.loser }).where(and(eq(schema.matchParticipants.matchId, matchId), eq(schema.matchParticipants.userId, loserId)));
+    await tx.execute(sql`update users set coins = coins + ${payout.winner} where id = ${winnerId}`);
   });
 }
