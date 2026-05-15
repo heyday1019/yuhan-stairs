@@ -16,3 +16,6 @@ build/
 docs/superpowers/plans/
 *.tsbuildinfo
 *.pem
+
+.vercel
+.env*.local

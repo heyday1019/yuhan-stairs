@@ -14,10 +14,7 @@ let _client: RedisClient | null = null;
 
 export function getRedis(): RedisClient {
   if (_client) return _client;
-  const r = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
+  const r = Redis.fromEnv();
   _client = {
     get: (k) => r.get(k),
     set: (k, v, o) => r.set(k, v, o as never) as Promise<'OK' | null>,
