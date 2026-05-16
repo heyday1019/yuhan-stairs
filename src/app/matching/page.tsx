@@ -15,7 +15,25 @@ function MatchingInner() {
 
   useEffect(() => {
     let cancelled = false;
-    let cleanup: (() => void) | undefined;
+    let channelCleanup: (() => void) | undefined;
+
+    // Start the bot-fallback timer immediately at mount, independent of the
+    // network chain below. The previous version only kicked off rAF after
+    // /me + subscribe + enqueue resolved, so on a cold-start mobile session
+    // the user saw "10초" frozen for several seconds before any visible tick
+    // — and if any of those awaits stalled or returned early (e.g. /me 404),
+    // rAF never started at all.
+    const deadline = performance.now() + FALLBACK_MS;
+    let raf = 0;
+    const tickTimer = () => {
+      if (goneRef.current) return;
+      const now = performance.now();
+      setSecondsLeft(Math.max(0, Math.ceil((deadline - now) / 1000)));
+      if (now >= deadline) { goBot(); return; }
+      raf = requestAnimationFrame(tickTimer);
+    };
+    raf = requestAnimationFrame(tickTimer);
+
     (async () => {
       const meRes = await apiFetch('/api/users/me');
       if (!meRes.ok) return;
@@ -30,6 +48,7 @@ function MatchingInner() {
         goneRef.current = true;
         router.push(`/game/${data.matchId}?mode=${mode}&type=ranked`);
       });
+      channelCleanup = () => { channel.unbind_all(); channel.unsubscribe(); };
       await new Promise<void>((resolve) => {
         let done = false;
         const fin = () => { if (!done) { done = true; resolve(); } };
@@ -48,23 +67,14 @@ function MatchingInner() {
           goneRef.current = true;
           router.push(`/game/${enqueue.matchId}?mode=${mode}&type=ranked`);
         }
-        return;
       }
-
-      // rAF-driven deadline timer — robust against Android Chrome setInterval throttling.
-      const deadline = performance.now() + FALLBACK_MS;
-      let raf = 0;
-      const tickTimer = () => {
-        const remaining = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
-        setSecondsLeft(remaining);
-        if (goneRef.current) return;
-        if (performance.now() >= deadline) { goBot(); return; }
-        raf = requestAnimationFrame(tickTimer);
-      };
-      raf = requestAnimationFrame(tickTimer);
-      cleanup = () => { cancelAnimationFrame(raf); channel.unbind_all(); channel.unsubscribe(); };
     })();
-    return () => { cancelled = true; cleanup?.(); };
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      channelCleanup?.();
+    };
   }, [mode, router]);
 
   const goBot = async () => {
