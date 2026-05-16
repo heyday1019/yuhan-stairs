@@ -9,13 +9,19 @@ export interface PusherServer {
 
 let _client: PusherServer | null = null;
 
+function cleanEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`${name} is not set`);
+  return v.replace(/^﻿/, '').trim();
+}
+
 export function getPusher(): PusherServer {
   if (_client) return _client;
   const p = new Pusher({
-    appId: process.env.PUSHER_APP_ID!,
-    key: process.env.PUSHER_KEY!,
-    secret: process.env.PUSHER_SECRET!,
-    cluster: process.env.PUSHER_CLUSTER!,
+    appId: cleanEnv('PUSHER_APP_ID'),
+    key: cleanEnv('PUSHER_KEY'),
+    secret: cleanEnv('PUSHER_SECRET'),
+    cluster: cleanEnv('PUSHER_CLUSTER'),
     useTLS: true,
   });
   _client = {
@@ -25,8 +31,8 @@ export function getPusher(): PusherServer {
       return p.authorizeChannel(socketId, channel);
     },
     verifyWebhook({ key, signature }, rawBody) {
-      if (key !== process.env.PUSHER_KEY) return false;
-      const expected = crypto.createHmac('sha256', process.env.PUSHER_SECRET!).update(rawBody).digest('hex');
+      if (key !== cleanEnv('PUSHER_KEY')) return false;
+      const expected = crypto.createHmac('sha256', cleanEnv('PUSHER_SECRET')).update(rawBody).digest('hex');
       return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'));
     },
   };

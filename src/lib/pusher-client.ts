@@ -4,10 +4,15 @@ import { getOrCreateDeviceId } from './device-id';
 
 let _pusher: Pusher | null = null;
 
+function clean(v: string | undefined, name: string): string {
+  if (!v) throw new Error(`${name} is not set`);
+  return v.replace(/^﻿/, '').trim();
+}
+
 export function getPusherClient(): Pusher {
   if (_pusher) return _pusher;
-  _pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+  _pusher = new Pusher(clean(process.env.NEXT_PUBLIC_PUSHER_KEY, 'NEXT_PUBLIC_PUSHER_KEY'), {
+    cluster: clean(process.env.NEXT_PUBLIC_PUSHER_CLUSTER, 'NEXT_PUBLIC_PUSHER_CLUSTER'),
     authEndpoint: '/api/pusher/auth',
     auth: { headers: { 'x-device-id': getOrCreateDeviceId() } },
   });
