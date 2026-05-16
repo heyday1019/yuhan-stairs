@@ -72,6 +72,10 @@ export default function GamePage() {
         onOpponentTick: ({ floor }) => setOpponentFloor(floor),
         onMatchEnded: (e) => applyMatchEnded(e),
         onCountdown: (startAtMs, seed, mode) => {
+          // Webhook re-broadcasts match_start on every member_added so late
+          // subscribers can recover, which means an already-initialized client
+          // can receive a duplicate. Skip to avoid wiping progress.
+          if (useGame.getState().matchStartAtMs !== null) return;
           const localStart = performance.now() + (startAtMs - Date.now());
           const stairList = generateStairs(seed, mode);
           init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: 'normal' });
