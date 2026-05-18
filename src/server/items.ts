@@ -66,3 +66,75 @@ export async function getEquipped(
   const list = await ctx.redis.lrange(key, 0, -1);
   return list as ItemId[];
 }
+
+// ---------------------------------------------------------------------------
+// useItem
+// ---------------------------------------------------------------------------
+
+const BOMB_RATE_LIMIT_MS = 10_000;
+const MINE_REACH = 5;
+const BEANSTALK_JUMP = 5;
+const BOMB_FUSE_MS = 3000;
+const BOMB_DURATION_MS = 1500;
+
+interface ParsedMatchState {
+  matchStartedAtMs: number;
+  lastSeq: number;
+  lastFloor: number;
+  flaggedCount: number;
+}
+
+async function getMatchState(redis: any, matchId: string, userId: string): Promise<ParsedMatchState | null> {
+  const stored = await redis.get(`match:state:${matchId}:${userId}`);
+  if (!stored) return null;
+  try { return JSON.parse(stored) as ParsedMatchState; } catch { return null; }
+}
+
+export type UseResult =
+  | { kind: 'beanstalk'; userId: string; fromFloor: number; toFloor: number }
+  | { kind: 'mine'; targetUserId: string; targetFloor: number }
+  | { kind: 'bomb'; targetUserId: string; triggerAtMs: number; durationMs: number };
+
+export async function useItem(
+  ctx: Ctx,
+  matchId: string,
+  userId: string,
+  opponentUserId: string,
+  itemId: string,
+  nowMs: number,
+): Promise<UseResult> {
+  if (!isValidItemId(itemId)) throw new Error(`unknown itemId: ${itemId}`);
+
+  const equippedKey = `match:equipped:${matchId}:${userId}`;
+  const equipped: string[] = await ctx.redis.lrange(equippedKey, 0, -1);
+  if (!equipped.includes(itemId)) throw new Error('item not equipped');
+
+  let result: UseResult;
+
+  if (itemId === 'beanstalk') {
+    const state = await getMatchState(ctx.redis, matchId, userId);
+    const fromFloor = state?.lastFloor ?? 0;
+    const toFloor = fromFloor + BEANSTALK_JUMP;
+    result = { kind: 'beanstalk', userId, fromFloor, toFloor };
+  } else if (itemId === 'mine') {
+    const state = await getMatchState(ctx.redis, matchId, opponentUserId);
+    const oppFloor = state?.lastFloor ?? 0;
+    const targetFloor = oppFloor + 1 + Math.floor(Math.random() * MINE_REACH);
+    result = { kind: 'mine', targetUserId: opponentUserId, targetFloor };
+  } else {
+    // bomb — rate limit
+    const lastKey = `match:bomb_lastused:${matchId}:${userId}`;
+    const lastStr = await ctx.redis.get(lastKey);
+    if (lastStr) {
+      const last = Number(lastStr);
+      if (nowMs - last < BOMB_RATE_LIMIT_MS) throw new Error('bomb rate limit');
+    }
+    await ctx.redis.set(lastKey, String(nowMs), { ex: 15 });
+    result = { kind: 'bomb', targetUserId: opponentUserId, triggerAtMs: nowMs + BOMB_FUSE_MS, durationMs: BOMB_DURATION_MS };
+  }
+
+  // Remove one occurrence of the used slot
+  await ctx.redis.lrem(equippedKey, 1, itemId);
+
+  return result;
+}

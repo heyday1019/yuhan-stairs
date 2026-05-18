@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { equipItems, getEquipped } from '@/server/items';
+import { equipItems, getEquipped, useItem } from '@/server/items';
 import { makeFakeRedis } from '../helpers/fake-redis';
 
 // ---------------------------------------------------------------------------
@@ -97,5 +97,63 @@ describe('items.getEquipped', () => {
     await equipItems({ redis, db } as any, 'm1', 'u1', ['bomb', 'bomb']);
     const result = await getEquipped({ redis, db } as any, 'm1', 'u1');
     expect(result).toEqual(['bomb', 'bomb']);
+  });
+});
+
+describe('items.useItem', () => {
+  it('beanstalk returns toFloor = currentFloor + 5', async () => {
+    const redis = makeFakeRedis();
+    await redis.rpush('match:equipped:m1:u1', 'beanstalk');
+    await redis.set('match:state:m1:u1', JSON.stringify({
+      matchStartedAtMs: 0, lastSeq: 20, lastFloor: 12, flaggedCount: 0,
+    }));
+    const res = await useItem({ redis } as any, 'm1', 'u1', 'u2', 'beanstalk', Date.now());
+    expect(res).toMatchObject({ kind: 'beanstalk', fromFloor: 12, toFloor: 17 });
+    expect(await redis.lrange('match:equipped:m1:u1', 0, -1)).toEqual([]);
+  });
+
+  it('mine picks targetFloor in [opp+1, opp+5]', async () => {
+    const redis = makeFakeRedis();
+    await redis.rpush('match:equipped:m1:u1', 'mine');
+    await redis.set('match:state:m1:u2', JSON.stringify({
+      matchStartedAtMs: 0, lastSeq: 0, lastFloor: 40, flaggedCount: 0,
+    }));
+    const res = await useItem({ redis } as any, 'm1', 'u1', 'u2', 'mine', Date.now());
+    expect(res.kind).toBe('mine');
+    expect((res as any).targetFloor).toBeGreaterThanOrEqual(41);
+    expect((res as any).targetFloor).toBeLessThanOrEqual(45);
+  });
+
+  it('bomb returns triggerAtMs = now + 3000', async () => {
+    const redis = makeFakeRedis();
+    await redis.rpush('match:equipped:m1:u1', 'bomb');
+    const now = 1_000_000;
+    const res = await useItem({ redis } as any, 'm1', 'u1', 'u2', 'bomb', now);
+    expect(res).toMatchObject({ kind: 'bomb', triggerAtMs: now + 3000, durationMs: 1500 });
+  });
+
+  it('rejects use when slot not equipped', async () => {
+    const redis = makeFakeRedis();
+    await expect(useItem({ redis } as any, 'm1', 'u1', 'u2', 'bomb', Date.now()))
+      .rejects.toThrow(/equipped/);
+  });
+
+  it('rejects bomb within 10s of previous bomb (rate limit)', async () => {
+    const redis = makeFakeRedis();
+    await redis.rpush('match:equipped:m1:u1', 'bomb', 'bomb');
+    const now = 1_000_000;
+    await useItem({ redis } as any, 'm1', 'u1', 'u2', 'bomb', now);
+    await expect(useItem({ redis } as any, 'm1', 'u1', 'u2', 'bomb', now + 5000))
+      .rejects.toThrow(/rate/i);
+  });
+
+  it('removes used slot from equipped (lrem)', async () => {
+    const redis = makeFakeRedis();
+    await redis.rpush('match:equipped:m1:u1', 'mine', 'bomb');
+    await redis.set('match:state:m1:u2', JSON.stringify({
+      matchStartedAtMs: 0, lastSeq: 0, lastFloor: 5, flaggedCount: 0,
+    }));
+    await useItem({ redis } as any, 'm1', 'u1', 'u2', 'mine', Date.now());
+    expect(await redis.lrange('match:equipped:m1:u1', 0, -1)).toEqual(['bomb']);
   });
 });
