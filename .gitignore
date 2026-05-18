@@ -14,6 +14,7 @@ build/
 
 # Local planning/spec scratchpads (not part of the repo)
 docs/superpowers/plans/
+task-log.md
 *.tsbuildinfo
 *.pem
 
