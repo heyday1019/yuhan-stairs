@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { isValidItemId } from '@/shared/items-catalog';
 import type { ItemId } from '@/shared/constants';
 import * as schema from '../../drizzle/schema';
@@ -37,19 +37,16 @@ export async function equipItems(
       }
     }
 
-    // Decrement inventory row-by-row (safe inside a transaction)
-    // Pass _userId/_itemId as side-channel so fakes (and tests) can introspect the target row.
+    // Decrement inventory via upsert — rows are guaranteed to exist (selected above),
+    // so the conflict branch always fires. Avoids side-channel keys that break real Postgres.
     for (const [iid, q] of Object.entries(need)) {
       const newQty = (have[iid] ?? 0) - q;
-      await tx
-        .update(schema.inventoryItems)
-        .set({ quantity: newQty, _userId: userId, _itemId: iid })
-        .where(
-          and(
-            eq(schema.inventoryItems.userId, userId),
-            eq(schema.inventoryItems.itemId, iid),
-          ),
-        );
+      await tx.insert(schema.inventoryItems)
+        .values({ userId, itemId: iid, quantity: newQty })
+        .onConflictDoUpdate({
+          target: [schema.inventoryItems.userId, schema.inventoryItems.itemId],
+          set: { quantity: newQty },
+        });
     }
   });
 

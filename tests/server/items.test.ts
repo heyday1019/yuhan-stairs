@@ -7,9 +7,8 @@ import { makeFakeRedis } from '../helpers/fake-redis';
 // ---------------------------------------------------------------------------
 // The impl calls:
 //   tx.select().from(schema.inventoryItems).where(eq(userId))  → rows
-//   tx.update(schema.inventoryItems).set({ quantity, _userId, _itemId }).where(...)
-//
-// We use _userId / _itemId as a side-channel so the fake can update the right row.
+//   tx.insert(schema.inventoryItems).values({ userId, itemId, quantity })
+//     .onConflictDoUpdate({ target: [...], set: { quantity } })
 // ---------------------------------------------------------------------------
 
 function makeFakeDb(seed: { inventory: Record<string, number> }) {
@@ -31,14 +30,11 @@ function makeFakeDb(seed: { inventory: Record<string, number> }) {
       }),
     }),
 
-    update: (_table: any) => ({
-      set: (vals: any) => ({
-        where: (_cond: any) => {
-          // Side-channel: impl passes _userId and _itemId alongside quantity
-          if (vals._userId !== undefined && vals._itemId !== undefined) {
-            const key = `${vals._userId}:${vals._itemId}`;
-            inventory.set(key, vals.quantity);
-          }
+    insert: (_table: any) => ({
+      values: (vals: any) => ({
+        onConflictDoUpdate: (_opts: any) => {
+          const k = `${vals.userId}:${vals.itemId}`;
+          inventory.set(k, vals.quantity);  // set absolute quantity
           return Promise.resolve();
         },
       }),
