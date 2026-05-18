@@ -8,6 +8,10 @@ export interface RedisClient {
   zrange(key: string, start: number, stop: number, opts?: { withScores?: boolean }): Promise<string[]>;
   zrem(key: string, ...members: string[]): Promise<number>;
   zremrangebyscore(key: string, min: number | string, max: number | string): Promise<number>;
+  rpush(key: string, ...values: string[]): Promise<number>;
+  lrange(key: string, start: number, stop: number): Promise<string[]>;
+  lrem(key: string, count: number, value: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<number | boolean>;
 }
 
 let _client: RedisClient | null = null;
@@ -23,6 +27,10 @@ export function getRedis(): RedisClient {
     zrange: (k, s, e, o) => r.zrange(k, s, e, o as never) as Promise<string[]>,
     zrem: (k, ...m) => r.zrem(k, ...m),
     zremrangebyscore: (k, mn, mx) => r.zremrangebyscore(k, mn as never, mx as never),
+    rpush: (k, ...vals) => r.rpush(k, ...vals),
+    lrange: (k, s, e) => r.lrange(k, s, e) as Promise<string[]>,
+    lrem: (k, c, v) => r.lrem(k, c, v),
+    expire: (k, s) => r.expire(k, s),
   };
   return _client;
 }
