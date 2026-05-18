@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, integer, timestamp, boolean, jsonb, date, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -24,6 +25,7 @@ export const matches = pgTable('matches', {
   winnerUserId: uuid('winner_user_id'),
   flagged: boolean('flagged').notNull().default(false),
   flaggedCount: integer('flagged_count').notNull().default(0),
+  itemsUsed: jsonb('items_used').notNull().default(sql`'[]'::jsonb`),
 }, (t) => ({ modeEndedAt: index('matches_mode_ended_idx').on(t.mode, t.endedAt) }));
 
 export const matchParticipants = pgTable('match_participants', {
@@ -48,3 +50,11 @@ export const transactions = pgTable('transactions', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({ userTimeIdx: index('transactions_user_time_idx').on(t.userId, t.createdAt) }));
+
+export const inventoryItems = pgTable('inventory_items', {
+  userId: uuid('user_id').notNull().references(() => users.id),
+  itemId: text('item_id').notNull(),                    // 'bomb' | 'mine' | 'beanstalk'
+  quantity: integer('quantity').notNull().default(0),
+}, (t) => ({
+  pk: uniqueIndex('inventory_items_pk').on(t.userId, t.itemId),
+}));
