@@ -50,6 +50,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const channel = `presence-match-${matchId}`;
     await pusher.trigger(channel, 'item_used', { userId: user.id, itemId, atMs: nowMs });
     if (result.kind === 'beanstalk') {
+      await getRedis().set(`match:beanstalk_pending:${matchId}:${user.id}`, '1', { ex: 5 });
       await pusher.trigger(channel, 'beanstalk_used', result);
     } else if (result.kind === 'mine') {
       await pusher.trigger(channel, 'mine_placed', { targetUserId: result.targetUserId, floor: result.targetFloor });

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const { id: matchId } = await ctx.params;
     const user = await getCurrentUserFromHeaders(req.headers);
-    const tick = await req.json() as { seq: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail'|'booster'|'item' };
+    const tick = await req.json() as { seq: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail'|'booster'|'item'|'beanstalk_use'|'mine_hit'|'shield_used' };
 
     const r = getRedis();
     const pusher = getPusher();
@@ -45,7 +45,29 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       : { matchStartedAtMs: match.matchStartedAt.getTime(), lastSeq: 0, lastFloor: 0, flaggedCount: match.flaggedCount };
 
     const elapsed = Date.now() - prev.matchStartedAtMs;
-    const result = validateTick(tick, prev, stairs, elapsed);
+
+    // mine_hit dedupe — second hit on the same mine (same floor) is ignored, no flag
+    let effectiveTick = tick;
+    if (tick.lastEvent === 'mine_hit') {
+      const dedupKey = `match:mine_hit:${matchId}:${user.id}:${tick.floor}`;
+      const wasFirst = await r.set(dedupKey, '1', { ex: 60, nx: true });
+      if (wasFirst !== 'OK') {
+        effectiveTick = { ...effectiveTick, lastEvent: undefined };
+      }
+    }
+
+    // beanstalk_use must be backed by an active pending window (set by items/use)
+    if (effectiveTick.lastEvent === 'beanstalk_use') {
+      const pendingKey = `match:beanstalk_pending:${matchId}:${user.id}`;
+      const pending = await r.get(pendingKey);
+      if (!pending) {
+        effectiveTick = { ...effectiveTick, lastEvent: undefined };
+      } else {
+        await r.del(pendingKey);
+      }
+    }
+
+    const result = validateTick(effectiveTick, prev, stairs, elapsed);
 
     if (!result.ok) {
       if (result.invalidated) {
@@ -60,7 +82,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ ok: false, reason: result.reason });
     }
 
-    await r.set(stateKey, JSON.stringify(result.nextState), { ex: 90 });
+    // Shield arming: combo just crossed into ≥20 and not yet armed/consumed
+    const nextState: ValidatorState = { ...result.nextState };
+    if (tick.combo >= 20 && !nextState.shieldArmedUntilMs && !nextState.shieldConsumed) {
+      nextState.shieldArmedUntilMs = elapsed + 1500;
+    }
+    // Combo break — reset shield state
+    if (tick.combo === 0 && (nextState.shieldArmedUntilMs || nextState.shieldConsumed)) {
+      nextState.shieldArmedUntilMs = undefined;
+      nextState.shieldConsumed = false;
+    }
+
+    await r.set(stateKey, JSON.stringify(nextState), { ex: 90 });
+
+    // Pickup handling — first time arriving at a hasItem stair (only ascending past lastFloor)
+    const currentStair = stairs[tick.floor - 1];
+    if (currentStair?.hasItem && tick.floor > prev.lastFloor) {
+      const equippedKey = `match:equipped:${matchId}:${user.id}`;
+      const slots = await r.lrange(equippedKey, 0, -1);
+      if (slots.length < 3) {
+        await r.rpush(equippedKey, currentStair.hasItem);
+        await r.expire(equippedKey, 90);
+        await pusher.trigger(`presence-match-${matchId}`, 'item_picked', {
+          userId: user.id, itemId: currentStair.hasItem, floor: tick.floor, slotIndex: slots.length,
+        });
+      }
+      // slot full → silently ignore (no broadcast, no animation per spec)
+    }
 
     const participants = await db.select().from(schema.matchParticipants).where(eq(schema.matchParticipants.matchId, matchId));
     const opponent = participants.find((p) => p.userId !== user.id);
@@ -84,7 +132,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     await pusher.trigger(`presence-match-${matchId}`, 'opponent_tick', {
-      userId: user.id, floor: tick.floor, combo: tick.combo, lastEvent: tick.lastEvent,
+      userId: user.id, floor: tick.floor, combo: tick.combo, lastEvent: effectiveTick.lastEvent,
     });
 
     return NextResponse.json({ ok: true });
