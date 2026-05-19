@@ -59,7 +59,7 @@
 - 사용 시점에 **상대의 다음 5칸 중 1칸**이 지뢰가 된다.
 - 클라가 `POST /api/matches/{id}/items/use { itemId:'mine' }` →
   1. 서버가 인벤토리/슬롯 확인.
-  2. 서버가 상대의 마지막 검증된 `floor` 조회 (`match:state:{matchId}:{opponentUserId}` HASH).
+  2. 서버가 상대의 마지막 검증된 `floor` 조회 (`match:state:{matchId}:{opponentUserId}` STRING(JSON), `lastFloor` 필드).
   3. `targetFloor = randomInt(opponentFloor + 1, opponentFloor + 5)`.
   4. `items_used` jsonb에 append.
   5. `mine_placed { targetUserId, floor }` 양쪽 broadcast.
@@ -187,7 +187,7 @@ alter table matches add column items_used jsonb not null default '[]'::jsonb;
 | `match:equipped:{matchId}:{userId}` | LIST (itemIds, 최대 3) | 90s | 매치별 장착 슬롯 (사용 시 제거) |
 | `match:bomb_lastused:{matchId}:{userId}` | STRING (atMs) | 15s | bomb 10초 rate limit |
 
-기존 `match:state:{matchId}:{userId}` HASH에 `lastInputLockUntilMs` 필드 추가 (mine hit 시 set, 다음 tick 검증에 사용).
+기존 `match:state:{matchId}:{userId}` STRING(JSON, M2 시점 형식: `{ matchStartedAtMs, lastSeq, lastFloor, flaggedCount }`)에 `lastInputLockUntilMs` 필드 추가 (mine hit 시 set, 다음 tick 검증에 사용).
 
 ---
 
