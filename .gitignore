@@ -20,3 +20,17 @@ task-log.md
 
 .vercel
 .env*.local
+
+# Design source files and pre-processed image originals — kept locally,
+# regenerated from scripts/ when needed. The processed outputs in
+# public/stair.png and public/characters/ are the canonical assets.
+yuhan.pen
+.orig-images/
+/bg.png
+/ca1.png
+/ca2.png
+/ca3.png
+/stair.png
+src/stairs.jpg
+public/_preview_*.png
+public/characters/_preview_*.png
