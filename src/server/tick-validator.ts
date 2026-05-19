@@ -5,12 +5,16 @@ export interface ValidatorState {
   lastSeq: number;
   lastFloor: number;
   flaggedCount: number;
+  lastInputLockUntilMs?: number;
+  shieldArmedUntilMs?: number;
+  shieldConsumed?: boolean;
 }
 
 export interface TickInput {
   seq: number;
   floor: number;
-  lastEvent?: 'fail' | 'booster' | 'item';
+  lastEvent?: 'fail' | 'booster' | 'item' | 'beanstalk_use' | 'mine_hit' | 'shield_used';
+  combo?: number;
 }
 
 export type TickReason =
@@ -18,7 +22,9 @@ export type TickReason =
   | 'floor_jump_too_large'
   | 'floor_regress_too_large'
   | 'rate_limit'
-  | 'booster_seed_mismatch';
+  | 'booster_seed_mismatch'
+  | 'input_locked'
+  | 'shield_not_armed';
 
 export interface TickResult {
   ok: boolean;
@@ -31,6 +37,8 @@ const MIN_MS_PER_FLOOR = 90;
 const MAX_FLOOR_JUMP = 8;
 const MAX_FLOOR_REGRESS = 3;
 const FLAG_THRESHOLD = 3;
+const MINE_INPUT_LOCK_MS = 1000;
+const SHIELD_COMBO_THRESHOLD = 20;
 
 export function validateTick(
   tick: TickInput,
@@ -41,6 +49,11 @@ export function validateTick(
   if (tick.seq <= state.lastSeq) {
     return { ok: false, reason: 'seq_not_monotonic', nextState: state };
   }
+  // input lock — expected condition (no flag)
+  const lockUntil = state.lastInputLockUntilMs ?? 0;
+  if (serverNowMsSinceStart < lockUntil) {
+    return { ok: false, reason: 'input_locked', nextState: { ...state, lastSeq: tick.seq } };
+  }
   const delta = tick.floor - state.lastFloor;
   if (delta > MAX_FLOOR_JUMP) {
     return { ok: false, reason: 'floor_jump_too_large', nextState: { ...state, lastSeq: tick.seq } };
@@ -48,7 +61,9 @@ export function validateTick(
   if (delta < -MAX_FLOOR_REGRESS) {
     return { ok: false, reason: 'floor_regress_too_large', nextState: { ...state, lastSeq: tick.seq } };
   }
-  if (tick.floor > 0 && serverNowMsSinceStart / MIN_MS_PER_FLOOR < tick.floor) {
+  // rate-limit: beanstalk_use with exactly +5 bypasses the cap for this single tick
+  const beanstalkBypass = tick.lastEvent === 'beanstalk_use' && delta === 5;
+  if (!beanstalkBypass && tick.floor > 0 && serverNowMsSinceStart / MIN_MS_PER_FLOOR < tick.floor) {
     const flaggedCount = state.flaggedCount + 1;
     return {
       ok: false,
@@ -69,8 +84,31 @@ export function validateTick(
       };
     }
   }
-  return {
-    ok: true,
-    nextState: { ...state, lastSeq: tick.seq, lastFloor: tick.floor },
+  if (tick.lastEvent === 'shield_used') {
+    const armedUntil = state.shieldArmedUntilMs ?? 0;
+    const comboOk = (tick.combo ?? 0) >= SHIELD_COMBO_THRESHOLD;
+    const windowOk = serverNowMsSinceStart <= armedUntil;
+    if (!comboOk || !windowOk) {
+      const flaggedCount = state.flaggedCount + 1;
+      return {
+        ok: false,
+        reason: 'shield_not_armed',
+        nextState: { ...state, lastSeq: tick.seq, flaggedCount },
+        invalidated: flaggedCount >= FLAG_THRESHOLD,
+      };
+    }
+  }
+
+  const nextState: ValidatorState = {
+    ...state,
+    lastSeq: tick.seq,
+    lastFloor: tick.floor,
   };
+  if (tick.lastEvent === 'mine_hit') {
+    nextState.lastInputLockUntilMs = serverNowMsSinceStart + MINE_INPUT_LOCK_MS;
+  }
+  if (tick.lastEvent === 'shield_used') {
+    nextState.shieldConsumed = true;
+  }
+  return { ok: true, nextState };
 }

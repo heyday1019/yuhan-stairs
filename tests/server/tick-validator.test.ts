@@ -72,3 +72,99 @@ describe('validateTick', () => {
     expect(r.invalidated).toBe(true);
   });
 });
+
+describe('validateTick — M3 extensions', () => {
+  it('beanstalk_use(+5)는 rate-limit 캡을 우회하여 통과', () => {
+    // 50ms 시점에 floor 5 (정상 cap이라면 5*90=450ms 필요 → rate_limit인데 우회)
+    const r = validateTick(
+      { seq: 1, floor: 5, lastEvent: 'beanstalk_use' },
+      baseState({ lastFloor: 0 }),
+      stairs,
+      50,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.nextState.lastFloor).toBe(5);
+    expect(r.nextState.lastSeq).toBe(1);
+  });
+
+  it('beanstalk_use 라도 +9는 floor_jump_too_large', () => {
+    const r = validateTick(
+      { seq: 1, floor: 9, lastEvent: 'beanstalk_use' },
+      baseState({ lastFloor: 0 }),
+      stairs,
+      50,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('floor_jump_too_large');
+  });
+
+  it('mine_hit는 nextState.lastInputLockUntilMs를 serverNow+1000으로 설정', () => {
+    const r = validateTick(
+      { seq: 2, floor: 10, lastEvent: 'mine_hit' },
+      baseState({ lastSeq: 1, lastFloor: 10 }),
+      stairs,
+      3000,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.nextState.lastInputLockUntilMs).toBe(4000);
+  });
+
+  it('input lock 구간의 tick은 input_locked로 거부 (flag 미증가)', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, lastInputLockUntilMs: 4000, flaggedCount: 0 });
+    const r = validateTick({ seq: 2, floor: 11 }, s, stairs, 3500);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('input_locked');
+    expect(r.nextState.flaggedCount).toBe(0);
+  });
+
+  it('input lock 만료 직후 tick은 통과', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, lastInputLockUntilMs: 4000 });
+    const r = validateTick({ seq: 2, floor: 11 }, s, stairs, 4000);
+    expect(r.ok).toBe(true);
+  });
+
+  it('shield_used: combo≥20 + arm window 내 → ok, shieldConsumed=true', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, shieldArmedUntilMs: 5000 });
+    const r = validateTick(
+      { seq: 2, floor: 10, lastEvent: 'shield_used', combo: 25 },
+      s,
+      stairs,
+      4500,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.nextState.shieldConsumed).toBe(true);
+  });
+
+  it('shield_used: combo<20 → shield_not_armed, flag 증가', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, shieldArmedUntilMs: 5000, flaggedCount: 0 });
+    const r = validateTick(
+      { seq: 2, floor: 10, lastEvent: 'shield_used', combo: 19 },
+      s,
+      stairs,
+      4500,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('shield_not_armed');
+    expect(r.nextState.flaggedCount).toBe(1);
+  });
+
+  it('shield_used: shieldArmedUntilMs 없음/지남 → shield_not_armed', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, flaggedCount: 0 });
+    const r = validateTick(
+      { seq: 2, floor: 10, lastEvent: 'shield_used', combo: 30 },
+      s,
+      stairs,
+      4500,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('shield_not_armed');
+    expect(r.nextState.flaggedCount).toBe(1);
+  });
+
+  it('ok 경로에서 shield/lock 필드는 명시적 변경이 없으면 보존', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, shieldArmedUntilMs: 9999, lastInputLockUntilMs: 0 });
+    const r = validateTick({ seq: 2, floor: 11 }, s, stairs, 2000);
+    expect(r.ok).toBe(true);
+    expect(r.nextState.shieldArmedUntilMs).toBe(9999);
+  });
+});
