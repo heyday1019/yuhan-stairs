@@ -24,6 +24,18 @@ export function createNetworkAdapter(matchId: string): OpponentSyncAdapter {
       });
       channel.bind('opponent_resumed', () => { opts.onOpponentResumed?.(); });
       channel.bind('match_ended', (data: MatchEnded) => { opts.onMatchEnded(data); });
+      channel.bind('item_picked', (data: { userId: string; itemId: string; floor: number; slotIndex: number }) => {
+        opts.onItemPicked?.(data.itemId, data.floor, data.slotIndex);
+      });
+      channel.bind('mine_placed', (data: { targetUserId: string; floor: number }) => {
+        opts.onMinePlaced?.(data.targetUserId, data.floor);
+      });
+      channel.bind('bomb_triggered', (data: { targetUserId: string; atMs: number; durationMs: number }) => {
+        opts.onBombTriggered?.(data.atMs, data.durationMs);
+      });
+      channel.bind('beanstalk_used', (data: { userId: string; fromFloor: number; toFloor: number }) => {
+        opts.onBeanstalkUsed?.(data.userId, data.fromFloor, data.toFloor);
+      });
 
       tickTimer = setInterval(() => {
         if (lastPayload) sendTickInner(lastPayload);

@@ -1,5 +1,6 @@
 'use client';
 import { getOrCreateDeviceId } from './device-id';
+import type { TickEvent } from '@/game/sync/types';
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
@@ -11,7 +12,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 export function createTickSender(matchId: string) {
   let inFlight = false;
   let nextSeq = 1;
-  return async (payload: { floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail'|'booster'|'item' }) => {
+  return async (payload: { floor: number; combo: number; coins: number; failCount: number; lastEvent?: TickEvent }) => {
     if (inFlight) return;
     inFlight = true;
     try {
