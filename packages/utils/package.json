@@ -1,0 +1,9 @@
+{
+  "name": "@pj1-muhan/utils",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node test/basic.test.js"
+  }
+}
