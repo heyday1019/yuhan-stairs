@@ -18,6 +18,8 @@ import { flashCombo, showFailPopup } from '@/game/renderers/effects';
 import type { Application } from 'pixi.js';
 import { Container } from 'pixi.js';
 import type { OpponentSyncAdapter } from '@/game/sync/types';
+import type { StageTextures } from '@/game/stage';
+import { CHARACTER_STORAGE_KEY, DEFAULT_CHARACTER_ID, OPPONENT_FALLBACK_ID, getCharacter } from '@/game/characters';
 
 export default function GamePage() {
   const params = useParams<{ matchId: string }>();
@@ -123,22 +125,46 @@ export default function GamePage() {
     }
   }, [ended, meta, router, params.matchId]);
 
-  const onPixiReady = useCallback((app: Application) => {
+  const onPixiReady = useCallback((app: Application, textures: StageTextures) => {
     const world = new Container();
+    world.sortableChildren = true;
     app.stage.addChild(world);
     const stairContainers = new Map<number, Container>();
-    const player = createPlayer();
+
+    const myCharId = (typeof window !== 'undefined' && localStorage.getItem(CHARACTER_STORAGE_KEY)) || DEFAULT_CHARACTER_ID;
+    const myChar = getCharacter(myCharId);
+    const fallback = textures.characters.values().next().value!;
+    const myTex = textures.characters.get(myChar.id) ?? fallback;
+    const player = createPlayer(myTex.idle, myTex.jump);
     world.addChild(player.container);
+
+    // Opponent: Phase 1 uses a fixed sprite — the real opponent character is wired in Phase 2.
+    const oppTex = textures.characters.get(OPPONENT_FALLBACK_ID) ?? fallback;
+    const opponent = createPlayer(oppTex.idle, oppTex.jump);
+    opponent.container.alpha = 0.85;
+    world.addChild(opponent.container);
+
     let lastFailCount = 0;
     let lastCombo = 0;
+    let lastPlayerFloor = 0;
+    let lastOpponentFloor = 0;
     app.ticker.add(() => {
-      const { stairs: curStairs, playerFloor: curFloor, failCount, combo } = useGame.getState();
+      const now = performance.now();
+      const { stairs: curStairs, playerFloor: curFloor, opponentFloor: oppFloor, failCount, combo } = useGame.getState();
       if (curStairs.length === 0) return;
+
+      if (curFloor > lastPlayerFloor) player.jump(now);
+      lastPlayerFloor = curFloor;
+      if (oppFloor > lastOpponentFloor) opponent.jump(now);
+      lastOpponentFloor = oppFloor;
+      player.update(now);
+      opponent.update(now);
+
       const anchorFloor = Math.max(1, curFloor);
       const lo = Math.max(1, anchorFloor - 5);
       const hi = Math.min(curStairs.length, anchorFloor + 15);
       for (let f = lo; f <= hi; f++) {
-        if (!stairContainers.has(f)) stairContainers.set(f, renderStair(world, curStairs[f - 1]));
+        if (!stairContainers.has(f)) stairContainers.set(f, renderStair(world, curStairs[f - 1], textures.stair));
       }
       setCameraToFloor(world, anchorFloor);
       const stair = curStairs[anchorFloor - 1];
@@ -146,6 +172,15 @@ export default function GamePage() {
         player.container.x = stair.x + 60;
         player.container.y = -(stair.floor - 1) * 50 - 22;
         player.setFlipped(stair.dir === 'L');
+      }
+      const oppStair = curStairs[Math.max(1, oppFloor) - 1];
+      if (oppStair) {
+        opponent.container.x = oppStair.x + 60;
+        opponent.container.y = -(oppStair.floor - 1) * 50 - 22;
+        opponent.setFlipped(oppStair.dir === 'L');
+        opponent.container.visible = oppFloor > 0;
+      } else {
+        opponent.container.visible = false;
       }
       if (failCount > lastFailCount) { showFailPopup(app.stage, 160, 200); lastFailCount = failCount; }
       if (combo.combo > lastCombo && combo.combo % 5 === 0) { flashCombo(app.stage, combo.combo); }
