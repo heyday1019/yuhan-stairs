@@ -49,7 +49,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       failCount: body.failCount,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, itemsUsed: match.itemsUsed ?? [] });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     throw e;
