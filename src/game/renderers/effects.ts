@@ -37,3 +37,34 @@ export function flashCombo(parent: Container, combo: number) {
   };
   requestAnimationFrame(tick);
 }
+
+export function showBeanstalkJump(parent: Container, _fromFloor: number, _toFloor: number) {
+  const text = new Text({ text: '🌱 +5!', style: { fontSize: 28, fontWeight: '800', fill: 0x66ff66 } });
+  text.x = 100;
+  text.y = 200;
+  parent.addChild(text);
+  const start = performance.now();
+  const tick = () => {
+    const t = (performance.now() - start) / 800;
+    if (t >= 1) {
+      parent.removeChild(text);
+      text.destroy();
+      return;
+    }
+    text.y = 200 - t * 60;
+    text.alpha = 1 - t;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+export function showShieldFlash(parent: Container) {
+  const text = new Text({ text: '🛡️ 실드!', style: { fontSize: 24, fontWeight: '800', fill: 0xffff66 } });
+  text.x = 100;
+  text.y = 240;
+  parent.addChild(text);
+  setTimeout(() => {
+    parent.removeChild(text);
+    text.destroy();
+  }, 700);
+}

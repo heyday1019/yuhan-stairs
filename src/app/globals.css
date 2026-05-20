@@ -36,3 +36,9 @@ body {
 .parallax-slow { animation: parallax-slow 20s linear infinite; }
 .parallax-fast { animation: parallax-fast 10s linear infinite; }
 
+@keyframes fever-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 0.9; }
+}
+.fever-pulse { animation: fever-pulse 1.2s ease-in-out infinite; }
+
