@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes parallax-slow {
+  from { background-position: 0 0; }
+  to   { background-position: 0 100vh; }
+}
+@keyframes parallax-fast {
+  from { background-position: 0 0; }
+  to   { background-position: 0 200vh; }
+}
+.parallax-slow { animation: parallax-slow 20s linear infinite; }
+.parallax-fast { animation: parallax-fast 10s linear infinite; }
+
