@@ -10,7 +10,11 @@ const STAIR_SPRITE_H = 117;
 const TREAD_BAND = 22;       // matches the legacy tread height for player y math
 const SPRITE_Y_OFFSET = -(STAIR_SPRITE_H - TREAD_BAND); // pushes cube body up so tread sits at y=0..22
 
-export function renderStair(world: Container, stair: Stair, tex: Texture): Container {
+interface RenderStairOpts {
+  isMine?: boolean;
+}
+
+export function renderStair(world: Container, stair: Stair, tex: Texture, opts: RenderStairOpts = {}): Container {
   const node = new Container();
   node.x = stair.x;
   node.y = -(stair.floor - 1) * FLOOR_HEIGHT;
@@ -27,6 +31,20 @@ export function renderStair(world: Container, stair: Stair, tex: Texture): Conta
   if (stair.hasCoin) {
     const coin = new Graphics().circle(STAIR_W / 2, -32, 12).fill(0xfbbf24).stroke({ color: 0xd97706, width: 2 });
     node.addChild(coin);
+  }
+  if (stair.hasItem) {
+    const box = new Graphics().rect(STAIR_W / 2 - 12, -52, 24, 24).fill({ color: 0xffaa00, alpha: 0.85 }).stroke({ color: 0x7a4a00, width: 2 });
+    node.addChild(box);
+    const q = new Text({ text: '?', style: { fontSize: 16, fontWeight: '700', fill: 0xffffff } });
+    q.x = STAIR_W / 2 - 5;
+    q.y = -52;
+    node.addChild(q);
+  }
+  if (opts.isMine) {
+    const skull = new Text({ text: '💀', style: { fontSize: 22 } });
+    skull.x = STAIR_W / 2 - 11;
+    skull.y = -50;
+    node.addChild(skull);
   }
   if (stair.floor % 20 === 0) {
     const label = new Text({ text: `${stair.floor}F`, style: { fontSize: 10, fill: 0xe0e7ff, fontWeight: '700' } });
