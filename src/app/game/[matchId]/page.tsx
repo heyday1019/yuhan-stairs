@@ -44,14 +44,26 @@ export default function GamePage() {
     const mode = Number(url.searchParams.get('mode') ?? '100');
     const seedParam = url.searchParams.get('seed');
     const diff = (url.searchParams.get('diff') ?? 'normal') as 'easy'|'normal'|'hard';
+    const slotsRaw = url.searchParams.get('slots');
+
+    const seedSlotsFromUrl = () => {
+      if (!slotsRaw) return;
+      try {
+        const parsed = JSON.parse(slotsRaw) as (string | null)[];
+        useGame.getState().setEquippedSlots(parsed);
+      } catch {}
+    };
 
     if (type === 'bot') {
       const seed = seedParam ?? params.matchId;
       const stairList = generateStairs(seed, mode);
       init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: diff });
+      seedSlotsFromUrl();
       setMeta({ type, mode, seed, diff });
       setMatchStartAt(performance.now());
     } else {
+      // For ranked, init runs inside onCountdown after match_start arrives — re-seed slots there.
+      seedSlotsFromUrl();
       setMeta({ type, mode, seed: null, diff });
     }
   }, [params.matchId, init, setMatchStartAt]);
@@ -81,6 +93,13 @@ export default function GamePage() {
           const localStart = performance.now() + (startAtMs - Date.now());
           const stairList = generateStairs(seed, mode);
           init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: 'normal' });
+          try {
+            const slotsRaw = new URL(window.location.href).searchParams.get('slots');
+            if (slotsRaw) {
+              const parsed = JSON.parse(slotsRaw) as (string | null)[];
+              useGame.getState().setEquippedSlots(parsed);
+            }
+          } catch {}
           setMatchStartAt(localStart);
         },
         onOpponentGrace: (remainingMs) => setOpponentDisconnectedGrace(remainingMs),
