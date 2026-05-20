@@ -16,9 +16,9 @@ export interface OpponentSyncAdapter {
     onCountdown?: (startAtMs: number, seed: string, mode: number) => void;
     onOpponentGrace?: (remainingMs: number) => void;
     onOpponentResumed?: () => void;
-    onItemPicked?: (itemId: string, floor: number, slotIndex: number) => void;
+    onItemPicked?: (userId: string, itemId: string, floor: number, slotIndex: number) => void;
     onMinePlaced?: (targetUserId: string, floor: number) => void;
-    onBombTriggered?: (atMs: number, durationMs: number) => void;
+    onBombTriggered?: (targetUserId: string, atMs: number, durationMs: number) => void;
     onBeanstalkUsed?: (userId: string, fromFloor: number, toFloor: number) => void;
   }): void;
   sendTick(tick: { seq?: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: TickEvent }): void;
