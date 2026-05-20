@@ -23,7 +23,7 @@ export async function createStage(canvas: HTMLCanvasElement, width: number, heig
     canvas,
     width,
     height,
-    backgroundColor: 0x0a0e27,
+    backgroundAlpha: 0,
     antialias: true,
     autoDensity: true,
     resolution: window.devicePixelRatio || 1,

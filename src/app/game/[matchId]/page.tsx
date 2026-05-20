@@ -298,7 +298,10 @@ export default function GamePage() {
   }, []);
 
   return (
-    <main className="relative mx-auto h-dvh w-full max-w-[420px] bg-slate-950">
+    <main
+      className="relative mx-auto h-dvh w-full max-w-[420px] bg-slate-950 bg-cover bg-center"
+      style={{ backgroundImage: "url('/bg.png')" }}
+    >
       <ParallaxLayers />
       <Hud />
       <PixiCanvas width={360} height={780} onReady={onPixiReady} />
