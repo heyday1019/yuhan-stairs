@@ -13,7 +13,9 @@ export function createBotAdapter(args: { stairs: Stair[]; difficulty: BotDifficu
         if (now >= state.nextTickAt) {
           state = advanceBot(state, now);
           opts.onOpponentTick({ floor: state.floor });
-          if (state.floor >= args.goalFloor) { opts.onMatchEnded({ reason: 'normal' }); return; }
+          // 'opponent_reached_goal'은 store.setOpponentFloor에서 설정함. onMatchEnded({reason:'normal'})는
+          // winnerUserId 없을 때 'reached_goal'로 매핑되어 endedReason을 잘못 덮어쓰므로 호출하지 않는다.
+          if (state.floor >= args.goalFloor) return;
         }
         requestAnimationFrame(step);
       };
