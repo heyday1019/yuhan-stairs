@@ -8,54 +8,44 @@
 
 ---
 
-## 다음 진행할 작업 (2026-05-22 이어서 시작)
+## 다음 진행할 작업 (2026-05-23 이어서 시작)
 
-**M3 Phase 0-7 코드 완료 + 2026-05-21 6개 버그/UX fix push 완료**. 마지막 prod = `02e0b26`. 남은 건 모바일에서 어제 push한 fix들을 검증하고 Phase 8 QA를 마무리하는 것.
+**M3 Phase 0-7 코드 완료 + Phase 8 모바일 QA 진행 중**. 마지막 prod = `ee39e5a`. 어제(2026-05-22) 봇 승/패 검증에서 4개 fix 추가 push. 검증 #5(승리), #6(패배), shop/about bg는 통과. 검증 #1-4 남음.
 
 ### 0. 세션 시작 시
 1. `task-log.md` 이 파일 읽기
-2. `git log --oneline -10` — 마지막 커밋 `02e0b26` 확인
+2. `git log --oneline -10` — 마지막 커밋 `ee39e5a` 확인
 3. `git status` — clean 확인
-4. `pnpm test` — 111 passing 확인 (스냅샷이 안 깨졌는지)
-5. 메모리 `project-stair-race-current-state.md` 일독
+4. `pnpm test` — 111 passing 확인
 
-### 1. 어제 push한 fix들의 모바일 검증 (최우선)
+### 1. 모바일 검증 — 남은 #1-4 항목 (최우선)
 
-어제 5개 commit으로 들어간 변경. **모바일에서 하드 새로고침 후 한 번에 검증**.
+**모바일에서 하드 새로고침 후 순서대로**. 통과/실패 모두 보고하면 task-log 마크업.
 
-#### 검증 항목 (순서대로)
-1. **시작 보너스 + grant 결과**: 새 device 또는 19명 user 모두 코인 500 이상이어야 함. 사용자가 본인 nickname 확인 → 잔액 500+ 인지.
-2. **상점 구매 UX** (`c315483`):
-   - 아이템 카드 "구매" 클릭 → **모달**("{이름} 구매 / {가격}코인을 사용합니다") 표시
-   - "구매" 누르면 → 하단 중앙에 **emerald 토스트**(`{이름} 구매 완료! -N코인`) 2초
-   - 보유 코인/보유 N 숫자 즉시 갱신
-3. **게임 화면 ItemBar 위치** (`c315483`):
-   - 가운데 하단에 **세로 3슬롯** + 슬롯 아래 이름 라벨
-   - ControlPad ◀ ▶가 좌우로 갈라지고 가운데에 ItemBar가 들어감 (겹침 X)
-   - 첫 진입 시 **튜토리얼 팝업** ("슬롯을 탭하면 사용돼요") 한 번 표시
-4. **게임 중 코인만 픽업** (`dbbd710`): stair에 `?` 박스(아이템) 안 보임. `🪙` 코인만.
-5. **봇 매치 결과**: 100층 도달 → **"승리!"** + 코인 보상 (`dbbd710`+`02e0b26`로 fix됨)
-   - result 화면 cyan 박스: `DEBUG end=reached_goal / won=true` 떠야 정상
-   - [x] 2026-05-22: 내 100 / 봇 98 / score 1422 / +61 / won=true 확인. **그러나 초기 렌더가 "패배" → 응답 후 "승리"로 flip**. result page `resp?.won ? '승리!' : '패배'`가 null fallback에서 패배로 떨어지는 race. **fix 적용**: 3-state로 분기 (`resp == null ? '집계 중...' : ...`) + 코인 row도 동일 패턴.
-6. **봇 매치 패배**: 봇이 먼저 100층 → **"패배"** + cyan 박스 `end=opponent_reached_goal / won=false`
-   - [x] 2026-05-22: 내 49 / 봇 100 / 점수 `...` / 코인 `+undefined` / `won=...` 보고. 진단: end API가 400 반환 → result page가 `setResp(errorPayload)`해서 `resp.totalDelta`/`resp.won` undefined. **2개 root cause fix** (commit `7818b93`):
-     - **Validator**: 어제 fix(`02e0b26`)가 booster+combo만 더했는데 **retreat 케이스 미고려**. fail로 -3층 retreated되면 coin은 더 높은 층에서 받았지만 ceiling은 finalFloor 기반이라 honest run flag. store에 `maxFloorReached` 트래킹 추가, /end body에 포함, validator는 `peakFloor = max(maxFloorReached, finalFloor)` + `maxSuccessfulTaps = peakFloor + failCount * FAIL_PENALTY_FLOORS`로 ceiling 산출.
-     - **Client**: end API 4xx 응답이 `setResp`로 들어가 `+undefined` 노출. `r.ok` 체크 후 `endError` 상태로 분리, 헤더에 "결과 집계 실패" 표시 + DEBUG에 `err=...` 추가.
-   - [x] 2026-05-22 재시도: 85/100 패배 / `err=coins exceed available`. 진단: validator는 fix됐는데도 reject. **진짜 root cause는 store의 코인 재수집 버그** — fail retreat 후 재climb 시 같은 stair의 `hasCoin`/`isBooster`를 또 더함. server는 stair당 1번만 카운트. fix: store에 `lastCrossedStair` 추가, `s.playerFloor > s.lastCrossedStair`일 때만 coin/booster 추가. 콤보 보너스는 tap당이라 그대로. beanstalk skipped stair는 retreat 후 collect 가능(의도).
-   - [x] 2026-05-22 재검증: 95/100 패배 / score 1204 / +37 / `won=false` — 한 번에 렌더, 모든 필드 정상.
-   - [x] 2026-05-22 재재검증 (commit `ea4d99f` 이후): 99/100 패배 / score 1234 / +37 / `won=false` — fail 많은 케이스도 통과. 코인 중복 카운트 fix 확정.
+- [ ] **#1 본인 코인 잔액** — 홈 화면 좌상단 코인 표시 확인. 0 또는 매우 낮으면 device localStorage가 매번 새 user 만드는 케이스인지 닉네임 모달 빈도로 판단. 새 가입 시 `dbbd710` 시작 보너스 500이 자동 부여돼야 함. 그래도 0이면 root cause 분석.
 
-#### 검증 결과 분기
-- 모두 통과 → 2단계 (디버그 표시 제거 + 나머지 Phase 8 QA)
-- 어느 한 항목 실패 → 디버그 정보 받아서 root cause 추가 분석
-- 사용자 nickname이 19명 외라면 → 모바일 device localStorage가 매번 비워지는 케이스. 시작 보너스 fix가 다음 가입부터 적용되니 본인 user 코인 직접 충전(`grant-coins.mjs` 재실행 또는 SQL `UPDATE users SET coins=500 WHERE nickname='{nick}'`)
+- [ ] **#2 상점 구매 UX** (`c315483`):
+  - `/shop` 다크 배경 + 보유 코인 잘 보이는지 (어제 `ee39e5a`로 fix됨)
+  - 카탈로그 3종 (🌱 잭콩 50 / 💥 지뢰 30 / 💣 폭탄 80)
+  - 잔액 부족 카드 → 구매 버튼 회색 disabled
+  - "구매" 탭 → 모달 `{이름} 구매 / {가격}코인을 사용합니다`
+  - 모달 "구매" → 하단 emerald 토스트 `{이름} 구매 완료! -N코인` 2초
+  - 보유 코인/보유 N 즉시 갱신
 
-### 2. 검증 완료 후 정리
+- [ ] **#3 게임 화면 ItemBar** (`c315483`):
+  - ControlPad ◀ ▶ 좌우 양 끝
+  - 가운데 하단에 **세로 3슬롯 ItemBar** + 슬롯 아래 아이템 이름 (text-[10px])
+  - 첫 진입 시 튜토리얼 팝업 1회 ("슬롯을 탭하면 사용돼요")
 
-- **디버그 표시 제거**: `src/app/result/[matchId]/page.tsx`의 cyan `DEBUG end=... / won=...` 박스 삭제 + 상대 최종 층 표시는 영구 유지(UX에 도움 됨). 별도 commit으로.
-- 통과 항목은 task-log에서 [x]로 체크
-- M3 spec § 12 "미해결 사항" 결과와 함께 업데이트하여 commit
-- M4 brainstorming 가능
+- [ ] **#4 게임 중 코인만 픽업** (`dbbd710`):
+  - stair에 `?` 박스(아이템) **없음**, 🪙 코인만 떨어짐 (booster 황금 stair는 정상)
+  - 픽업한 코인은 게임 후 잔액 +N 합산되는지 확인 (이미 봇 패배 결과 +37 확인됨 → OK)
+
+### 2. 검증 #1-4 통과 후 정리
+
+- [ ] **디버그 정보 제거** — `src/app/result/[matchId]/page.tsx`의 cyan `DEBUG end=... / won=... / err=...` 박스 + "결과 집계 실패" 헤더는 검증용. 정상 동작 확정되면 둘 다 제거. **상대 최종 층 라인은 영구 유지** (UX 도움). `endError` state 자체는 남겨두면 미래 디버깅에 유용 — UI에서만 빼는 게 안전.
+- [ ] M3 spec `docs/superpowers/specs/2026-05-18-stair-race-m3-design.md` §12 "미해결 사항" 결과로 업데이트
+- [ ] M4 brainstorming 가능 (마리오 카트 스타일 아이템 박스 + 상대방 실제 캐릭터 등 백로그 정리)
 
 ### 3. Phase 8 — 남은 모바일 QA 항목
 
@@ -186,7 +176,7 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 - **M2 spec**: `docs/superpowers/specs/2026-05-15-stair-race-m2-design.md`
 - **M2 plan**: `docs/superpowers/plans/2026-05-15-stair-race-m2.md` (gitignored)
 - **M1 spec**: `docs/superpowers/specs/2026-05-13-stair-race-design.md`
-- **Production**: https://yuhan-stairs.vercel.app — 현재 `19354c7` 배포 중
+- **Production**: https://yuhan-stairs.vercel.app — 현재 `ee39e5a` 배포 중
 - **Vercel project**: nicks-projects-eb6dc4a3/yuhan-stairs
 - **GitHub repo**: https://github.com/heyday1019/yuhan-stairs
 
@@ -198,6 +188,69 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 - 콤보 5/10/20/50 단계 시각 효과 강화, 카메라 lerp 가속, 배경 패럴랙스
 - WebAudio BGM (main/matching/game/fever/result 5슬롯, Pixabay/FMA 등 무료 라이선스)
 - 이모티콘/추월 알림은 M4로 미룸
+
+---
+
+## History — 2026-05-22 (Phase 8 2차 모바일 QA → 봇 결과 race + retreat anti-cheat + shop bg)
+
+세션 주제: 봇 매치 승/패 결과를 모바일에서 검증하면서 3개 root cause를 순차 발견 → fix. 추가로 shop/about 페이지 배경 미설정 발견. 총 **4개 fix commit + 2개 doc commit** push (`a9a283a → ee39e5a`).
+
+### 작업 흐름 (시간 순)
+
+1. **봇 승리 시 "패배 → 승리" flip** (모바일: 100/98 won=true인데 처음에 "패배" 표시 → 시간 지나 "승리"로 바뀜)
+   - Root cause: `result/[matchId]/page.tsx:58`의 `resp?.won ? '승리!' : '패배'`가 fetch 응답 도착 전 `resp === null`일 때 falsy fallback → "패배" 먼저 렌더. fetch 완료되면 "승리!"로 flip.
+   - Fix: 3-state ternary `resp == null ? '집계 중...' : resp.won ? '승리!' : '패배'`. 코인 row도 동일 패턴 (`+0` 깜빡임 방지).
+   - Commit: `a9a283a fix(result): show '집계 중...' while end API loading`
+
+2. **봇 패배 시 "+undefined / won=..."** (모바일: 49/100 패배 결과에서 점수/코인/won 모두 placeholder)
+   - 진단: end API가 4xx 반환 → result page가 `r.ok` 체크 없이 `setResp(errorPayload)` → `resp.totalDelta`/`resp.won` undefined. 점수는 `?? '...'` 처리됐는데 코인은 그대로 노출.
+   - Root cause: 어제(`02e0b26`) validator fix는 booster+combo만 더했고 **retreat 케이스 미고려**. fail로 -3층 떨어지면 코인은 더 높은 층에서 받았지만 `stairs.slice(0, finalFloor)`만 ceiling으로 — honest run flag.
+   - Fix 2개: (a) store에 `maxFloorReached` 트래킹 추가 → /end body에 포함 → validator `peakFloor = max(maxFloorReached, finalFloor)` + `maxSuccessfulTaps = peakFloor + failCount * FAIL_PENALTY_FLOORS`. (b) result page `r.ok` 분기로 `endError` 상태 분리, 헤더에 "결과 집계 실패", DEBUG에 `err=...` 추가.
+   - Commit: `7818b93 fix(end-route,store,result): account for fail retreats in coin ceiling`
+   - 1차 재검증 통과: 95/100 패배 / score 1204 / +37 / won=false 한 번에 렌더.
+
+3. **봇 패배 다른 시드에서 "coins exceed available"** (모바일: 85/100 패배, err=coins exceed available)
+   - 진단: validator는 fix됐는데 여전히 400. fail이 많은 시드에서 재현.
+   - Root cause: `store.ts:handleTap`이 매 advance마다 `next.hasCoin`/`next.isBooster`를 더함. fail로 retreat 후 같은 stair 재climb 시 코인을 **두 번 카운트**. server validator는 stair당 1번만 합산하므로 honest run 초과.
+   - Fix: store에 `lastCrossedStair: number` (init -1) 추가. handleTap에서 `s.playerFloor > s.lastCrossedStair`일 때만 hasCoin/isBooster 카운트. 콤보 보너스(`combo.combo % 5 === 0`)는 tap-per-tap이라 그대로 — retreat 후 콤보 재축적은 의도된 보상.
+   - Beanstalk skipped stair는 retreat 시 `lastCrossedStair` 미업데이트 상태라 다음 climb 때 collect 가능 (의도된 trade-off).
+   - Commit: `ea4d99f fix(store): stop double-collecting hasCoin/isBooster on retreat re-climb`
+   - 재검증 통과: 99/100 패배 (fail 많은 케이스) / score 1234 / +37 / won=false 정상 동작.
+
+4. **shop 페이지 흰 배경 + 흰 글자** (모바일: "상점 배경이 흰색이라 잔고가 안 보여")
+   - Root cause: `globals.css`에 `--background: #ffffff` 기본값. dark mode media query 있지만 Toss webview가 light mode로 떨어지면 body 배경 그대로 흰색. 다른 페이지(home/result/mode-select/matching/game)는 main에 `bg-slate-950` 명시했으나 **shop과 about만 누락** — 흰 배경 + 흰 텍스트 = invisible.
+   - Fix: 두 페이지 main className에 `min-h-dvh bg-slate-950` 추가. globals.css는 미수정 (다른 페이지 영향 없게 surgical).
+   - Commit: `ee39e5a fix(shop,about): force dark bg so coin balance shows on light-mode webview`
+
+### 주요 발견 / 결정
+
+- **3-state ternary는 fetch-driven UI의 기본 패턴**: `resp == null ? loading : resp.cond ? a : b`. null fallback이 falsy로 떨어져 잘못된 분기로 가기 쉬움. result page에서 score는 이미 `?? '...'`로 처리했는데 타이틀/코인은 빠져있었음 — 일관된 패턴으로 통일.
+- **server validator는 client store의 *모든* 코인 규칙을 1:1 미러해야 함**: 어제는 booster+combo 누락(`02e0b26`), 오늘은 retreat의 maxFloor 누락 + double-collect 버그 + failCount 헤드룸. 이번 fix로 store는 stair당 1회만 코인 부여 + server는 그에 맞춘 ceiling — 양쪽이 정확히 매칭됨.
+- **`maxFloorReached` vs `lastCrossedStair`는 별도 개념**: 전자는 위치(최고 도달 층), 후자는 *횡단* 여부(coin 정산 기준). beanstalk으로 30→35 점프 시 maxFloorReached=35지만 lastCrossedStair는 이전 값 유지 — 그 사이 stair는 retreat 후 다시 collect 가능. 두 필드는 의미가 달라서 합치면 안 됨.
+- **client `r.ok` 체크는 mandatory**: `.then(r => r.json()).then(setResp)`는 4xx 응답을 그대로 state에 dump해서 `undefined` 노출. 모든 fetch는 `r.ok` 분기 필수.
+- **CSS `--background` light default + 다크 테마 앱**: media query `(prefers-color-scheme: dark)`는 Toss webview에서 트리거되지 않는 경우가 있음. 모든 페이지가 명시적으로 다크 bg를 깔거나 globals.css의 default를 다크로 바꾸는 게 robust — 다음 세션에 결정.
+
+### 테스트 상태
+- 4번의 fix commit 직전 `npx tsc --noEmit` 모두 exit 0.
+- `pnpm test` 1회 실행 — 111 passing 유지 (기존 18 test files).
+
+### 세션 종료 시 git 상태
+- **origin/main = HEAD = `ee39e5a`** (push 완료, ahead 0)
+- working tree clean (이 task-log update commit 직후)
+- prod 배포: https://yuhan-stairs.vercel.app — 매 commit마다 Vercel auto-deploy
+- 오늘 세션 신규 commits: **6개** (a9a283a, 7818b93, b937de7, ea4d99f, 1fae197, ee39e5a)
+
+### 사용자 결정 사항
+1. 배포 방식 동일: 매 fix 즉시 main push (어제 패턴 유지).
+2. shop/about bg fix는 페이지별 surgical fix — globals.css는 안 건드림 (다른 페이지 영향 없게).
+
+### 미해결 / 명일 우선 검증 항목
+- [ ] #1 본인 코인 잔액 / 새 가입 시 시작 보너스 500 자동 부여
+- [ ] #2 상점 구매 UX (모달 + 토스트 + 잔액 즉시 갱신 + 잔액 부족 disabled)
+- [ ] #3 게임 ItemBar (가운데 세로 + 라벨 + 튜토리얼 1회)
+- [ ] #4 게임 중 코인만 픽업 (stair에 ? 박스 없음)
+- [ ] 통과 후 디버그 cyan 박스 + "결과 집계 실패" 헤더 제거
+- [ ] Phase 8 §1단계~§6단계 QA (혼자 가능부터)
 
 ---
 
