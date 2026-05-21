@@ -26,6 +26,7 @@ export default function ResultPage() {
   const router = useRouter();
   const game = useGame();
   const [resp, setResp] = useState<EndResp | null>(null);
+  const [endError, setEndError] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,18 +46,28 @@ export default function ResultPage() {
       method: 'POST',
       body: JSON.stringify({
         finalFloor: game.playerFloor,
+        maxFloorReached: game.maxFloorReached,
         maxCombo: game.combo.maxCombo,
         totalCoins: game.coinsCollected,
         failCount: game.failCount,
         endReason: game.endedReason,
       }),
-    }).then((r) => r.json()).then(setResp);
+    })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setEndError(typeof body?.error === 'string' ? body.error : `HTTP ${r.status}`);
+          return;
+        }
+        setResp(body);
+      })
+      .catch((e) => setEndError(String(e?.message ?? e)));
   }, [game.matchId, game.endedReason, params.matchId]);
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-slate-950 p-6 text-white">
       <h2 className="text-2xl font-bold">
-        {resp == null ? '집계 중...' : resp.won ? '승리!' : '패배'}
+        {endError ? '결과 집계 실패' : resp == null ? '집계 중...' : resp.won ? '승리!' : '패배'}
       </h2>
       <div className="text-center">
         <div className="text-sm opacity-80">내 최종 층 {game.playerFloor} / {game.goalFloor}</div>
@@ -64,7 +75,7 @@ export default function ResultPage() {
         <div className="text-sm opacity-80">점수 {resp?.score ?? '...'}</div>
         <div className="mt-4 text-amber-300">획득 코인 {resp == null ? '...' : `+${resp.totalDelta}`}</div>
         <div className="mt-3 inline-block rounded bg-slate-800 px-3 py-1 text-xs text-cyan-300">
-          DEBUG end={game.endedReason} / won={String(resp?.won ?? '...')}
+          DEBUG end={game.endedReason} / won={String(resp?.won ?? '...')}{endError ? ` / err=${endError}` : ''}
         </div>
       </div>
 

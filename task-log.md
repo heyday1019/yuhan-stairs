@@ -38,6 +38,9 @@
    - result 화면 cyan 박스: `DEBUG end=reached_goal / won=true` 떠야 정상
    - [x] 2026-05-22: 내 100 / 봇 98 / score 1422 / +61 / won=true 확인. **그러나 초기 렌더가 "패배" → 응답 후 "승리"로 flip**. result page `resp?.won ? '승리!' : '패배'`가 null fallback에서 패배로 떨어지는 race. **fix 적용**: 3-state로 분기 (`resp == null ? '집계 중...' : ...`) + 코인 row도 동일 패턴.
 6. **봇 매치 패배**: 봇이 먼저 100층 → **"패배"** + cyan 박스 `end=opponent_reached_goal / won=false`
+   - [x] 2026-05-22: 내 49 / 봇 100 / 점수 `...` / 코인 `+undefined` / `won=...` 보고. 진단: end API가 400 반환 → result page가 `setResp(errorPayload)`해서 `resp.totalDelta`/`resp.won` undefined. **2개 root cause fix**:
+     - **Validator**: 어제 fix(`02e0b26`)가 booster+combo만 더했는데 **retreat 케이스 미고려**. fail로 -3층 retreated되면 coin은 더 높은 층에서 받았지만 ceiling은 finalFloor 기반이라 honest run flag. store에 `maxFloorReached` 트래킹 추가, /end body에 포함, validator는 `peakFloor = max(maxFloorReached, finalFloor)` + `maxSuccessfulTaps = peakFloor + failCount * FAIL_PENALTY_FLOORS`로 ceiling 산출.
+     - **Client**: end API 4xx 응답이 `setResp`로 들어가 `+undefined` 노출. `r.ok` 체크 후 `endError` 상태로 분리, 헤더에 "결과 집계 실패" 표시 + DEBUG에 `err=...` 추가.
 
 #### 검증 결과 분기
 - 모두 통과 → 2단계 (디버그 표시 제거 + 나머지 Phase 8 QA)

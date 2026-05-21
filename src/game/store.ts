@@ -18,6 +18,7 @@ interface GameState {
   goalFloor: number;
   stairs: Stair[];
   playerFloor: number;
+  maxFloorReached: number;
   opponentFloor: number;
   botDifficulty: BotDifficulty;
   combo: ComboState;
@@ -68,6 +69,7 @@ export const useGame = create<GameState>((set, get) => ({
   goalFloor: 100,
   stairs: [],
   playerFloor: 0,
+  maxFloorReached: 0,
   opponentFloor: 0,
   botDifficulty: 'normal',
   combo: createComboState(),
@@ -91,7 +93,7 @@ export const useGame = create<GameState>((set, get) => ({
   init({ matchId, goalFloor, stairs, botDifficulty }) {
     set({
       matchId, goalFloor, stairs, botDifficulty,
-      playerFloor: 0, opponentFloor: 0,
+      playerFloor: 0, maxFloorReached: 0, opponentFloor: 0,
       combo: createComboState(),
       coinsCollected: 0, failCount: 0, inputLockedUntil: 0,
       endedReason: null, matchStartAtMs: null, opponentDisconnectedGraceMs: null,
@@ -140,7 +142,8 @@ export const useGame = create<GameState>((set, get) => ({
         shieldConsumed = false;
       }
 
-      set({ playerFloor, combo, coinsCollected, inputLockedUntil, mines, shieldArmedUntilMs, shieldConsumed, pendingTickEvent });
+      const maxFloorReached = Math.max(s.maxFloorReached, playerFloor);
+      set({ playerFloor, maxFloorReached, combo, coinsCollected, inputLockedUntil, mines, shieldArmedUntilMs, shieldConsumed, pendingTickEvent });
       if (playerFloor >= s.goalFloor) get().end('reached_goal');
     } else {
       // M3 shield: time-windowed, separate from combo.shieldAvailable
@@ -241,7 +244,11 @@ export const useGame = create<GameState>((set, get) => ({
     if (result.kind === 'beanstalk') {
       const atMs = performance.now();
       get().applyBeanstalkJump(result.fromFloor, result.toFloor, atMs);
-      set({ playerFloor: result.toFloor, pendingTickEvent: 'beanstalk_use' });
+      set({
+        playerFloor: result.toFloor,
+        maxFloorReached: Math.max(get().maxFloorReached, result.toFloor),
+        pendingTickEvent: 'beanstalk_use',
+      });
     }
     // mine/bomb visual side-effects come back via Pusher (mine_placed/bomb_triggered)
     // and are applied by the adapter binding.
