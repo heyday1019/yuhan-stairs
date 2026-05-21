@@ -12,7 +12,7 @@ export function ControlPad() {
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex gap-3 px-4 pb-6 pt-3"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-end gap-2 px-4 pb-6 pt-3"
       style={{ touchAction: 'manipulation' }}
     >
       <button
@@ -23,6 +23,7 @@ export function ControlPad() {
       >
         ◀
       </button>
+      <div className="w-20 shrink-0" aria-hidden />
       <button
         type="button"
         aria-label="오른쪽 계단"

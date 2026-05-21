@@ -12,11 +12,20 @@ interface ShopData {
   coins: number;
 }
 
+interface PendingBuy {
+  itemId: string;
+  qty: number;
+  name: string;
+  totalPrice: number;
+}
+
 export default function ShopPage() {
   const router = useRouter();
   const [data, setData] = useState<ShopData | null>(null);
   const [slots, setSlots] = useState<(string | null)[]>([null, null, null]);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingBuy | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const reload = () =>
     apiFetch('/api/shop/items')
@@ -32,7 +41,16 @@ export default function ShopPage() {
     } catch {}
   }, []);
 
-  const onBuy = async (itemId: string, qty: number) => {
+  const onBuy = (itemId: string, qty: number) => {
+    const meta = data?.catalog.find((m) => m.id === itemId);
+    if (!meta) return;
+    setPending({ itemId, qty, name: meta.name, totalPrice: meta.price * qty });
+  };
+
+  const confirmBuy = async () => {
+    if (!pending) return;
+    const { itemId, qty, name, totalPrice } = pending;
+    setPending(null);
     const res = await apiFetch('/api/shop/buy', {
       method: 'POST',
       body: JSON.stringify({ itemId, qty }),
@@ -43,6 +61,8 @@ export default function ShopPage() {
       return;
     }
     await reload();
+    setToast(`${name} 구매 완료! -${totalPrice}코인`);
+    setTimeout(() => setToast(null), 2000);
   };
 
   if (!data) return <main className="p-6 text-white">로딩…</main>;
@@ -89,6 +109,35 @@ export default function ShopPage() {
       >
         모드 선택으로
       </button>
+
+      {pending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-xs rounded-2xl bg-slate-800 p-6 text-white">
+            <p className="mb-1 text-base font-bold">{pending.name} 구매</p>
+            <p className="mb-4 text-sm text-slate-300">{pending.totalPrice}코인을 사용합니다.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPending(null)}
+                className="flex-1 rounded-xl bg-slate-700 py-2 text-sm font-bold"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmBuy}
+                className="flex-1 rounded-xl bg-amber-400 py-2 text-sm font-bold text-amber-900"
+              >
+                구매
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white shadow-lg">
+          {toast}
+        </div>
+      )}
     </main>
   );
 }
