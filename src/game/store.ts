@@ -19,6 +19,7 @@ interface GameState {
   stairs: Stair[];
   playerFloor: number;
   maxFloorReached: number;
+  lastCrossedStair: number;
   opponentFloor: number;
   botDifficulty: BotDifficulty;
   combo: ComboState;
@@ -70,6 +71,7 @@ export const useGame = create<GameState>((set, get) => ({
   stairs: [],
   playerFloor: 0,
   maxFloorReached: 0,
+  lastCrossedStair: -1,
   opponentFloor: 0,
   botDifficulty: 'normal',
   combo: createComboState(),
@@ -93,7 +95,7 @@ export const useGame = create<GameState>((set, get) => ({
   init({ matchId, goalFloor, stairs, botDifficulty }) {
     set({
       matchId, goalFloor, stairs, botDifficulty,
-      playerFloor: 0, maxFloorReached: 0, opponentFloor: 0,
+      playerFloor: 0, maxFloorReached: 0, lastCrossedStair: -1, opponentFloor: 0,
       combo: createComboState(),
       coinsCollected: 0, failCount: 0, inputLockedUntil: 0,
       endedReason: null, matchStartAtMs: null, opponentDisconnectedGraceMs: null,
@@ -116,8 +118,15 @@ export const useGame = create<GameState>((set, get) => ({
     if (!next) return;
 
     if (next.dir === dir) {
-      let coinsCollected = s.coinsCollected + (next.hasCoin ? 1 : 0);
-      if (next.isBooster) coinsCollected += 3;
+      // Each stair's hasCoin/isBooster is a one-time pickup. After a fail retreat,
+      // re-traversing already-crossed stairs must NOT add coins again, or honest runs
+      // exceed the server-side ceiling. Combo bonus is per-tap, so it still applies.
+      const isNewStair = s.playerFloor > s.lastCrossedStair;
+      let coinsCollected = s.coinsCollected;
+      if (isNewStair) {
+        if (next.hasCoin) coinsCollected += 1;
+        if (next.isBooster) coinsCollected += 3;
+      }
       const playerFloor = s.playerFloor + 1;
       const combo = onCorrectTap(s.combo, atMs);
       if (combo.combo > 0 && combo.combo % 5 === 0) coinsCollected += 1;
@@ -143,7 +152,8 @@ export const useGame = create<GameState>((set, get) => ({
       }
 
       const maxFloorReached = Math.max(s.maxFloorReached, playerFloor);
-      set({ playerFloor, maxFloorReached, combo, coinsCollected, inputLockedUntil, mines, shieldArmedUntilMs, shieldConsumed, pendingTickEvent });
+      const lastCrossedStair = Math.max(s.lastCrossedStair, s.playerFloor);
+      set({ playerFloor, maxFloorReached, lastCrossedStair, combo, coinsCollected, inputLockedUntil, mines, shieldArmedUntilMs, shieldConsumed, pendingTickEvent });
       if (playerFloor >= s.goalFloor) get().end('reached_goal');
     } else {
       // M3 shield: time-windowed, separate from combo.shieldAvailable

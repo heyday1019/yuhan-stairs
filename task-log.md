@@ -41,6 +41,7 @@
    - [x] 2026-05-22: 내 49 / 봇 100 / 점수 `...` / 코인 `+undefined` / `won=...` 보고. 진단: end API가 400 반환 → result page가 `setResp(errorPayload)`해서 `resp.totalDelta`/`resp.won` undefined. **2개 root cause fix** (commit `7818b93`):
      - **Validator**: 어제 fix(`02e0b26`)가 booster+combo만 더했는데 **retreat 케이스 미고려**. fail로 -3층 retreated되면 coin은 더 높은 층에서 받았지만 ceiling은 finalFloor 기반이라 honest run flag. store에 `maxFloorReached` 트래킹 추가, /end body에 포함, validator는 `peakFloor = max(maxFloorReached, finalFloor)` + `maxSuccessfulTaps = peakFloor + failCount * FAIL_PENALTY_FLOORS`로 ceiling 산출.
      - **Client**: end API 4xx 응답이 `setResp`로 들어가 `+undefined` 노출. `r.ok` 체크 후 `endError` 상태로 분리, 헤더에 "결과 집계 실패" 표시 + DEBUG에 `err=...` 추가.
+   - [x] 2026-05-22 재시도: 85/100 패배 / `err=coins exceed available`. 진단: validator는 fix됐는데도 reject. **진짜 root cause는 store의 코인 재수집 버그** — fail retreat 후 재climb 시 같은 stair의 `hasCoin`/`isBooster`를 또 더함. server는 stair당 1번만 카운트. fix: store에 `lastCrossedStair` 추가, `s.playerFloor > s.lastCrossedStair`일 때만 coin/booster 추가. 콤보 보너스는 tap당이라 그대로. beanstalk skipped stair는 retreat 후 collect 가능(의도).
    - [x] 2026-05-22 재검증: 95/100 패배 / score 1204 / +37 / `won=false` — 한 번에 렌더, 모든 필드 정상.
 
 #### 검증 결과 분기
