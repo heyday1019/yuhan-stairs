@@ -61,7 +61,9 @@ export default function ResultPage() {
         <div className="text-sm opacity-80">상대 최종 층 {game.opponentFloor} / {game.goalFloor}</div>
         <div className="text-sm opacity-80">점수 {resp?.score ?? '...'}</div>
         <div className="mt-4 text-amber-300">획득 코인 +{resp?.totalDelta ?? 0}</div>
-        <div className="mt-2 text-[10px] opacity-40">end={game.endedReason} won={String(resp?.won ?? '...')}</div>
+        <div className="mt-3 inline-block rounded bg-slate-800 px-3 py-1 text-xs text-cyan-300">
+          DEBUG end={game.endedReason} / won={String(resp?.won ?? '...')}
+        </div>
       </div>
 
       {resp?.itemsUsed && resp.itemsUsed.length > 0 && (
