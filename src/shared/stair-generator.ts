@@ -2,8 +2,6 @@ import { createRng } from './rng';
 import {
   BOOSTER_SPAWN_RATE,
   COIN_SPAWN_RATE,
-  FREE_ITEM_SPAWN_RATE,
-  ITEM_IDS,
   MAX_RUN_LENGTH,
   MIN_RUN_LENGTH,
 } from './constants';
@@ -50,10 +48,8 @@ export function generateStairs(seed: string, count: number): Stair[] {
     const boosterChance = BOOSTER_SPAWN_RATE * (justSwitched ? 1.5 : 1.0);
     const isBooster = rng.chance(boosterChance);
     const hasCoin = !isBooster && rng.chance(COIN_SPAWN_RATE);
-    const hasFreeItem = !isBooster && !hasCoin && rng.chance(FREE_ITEM_SPAWN_RATE);
-    const hasItem = hasFreeItem ? ITEM_IDS[rng.nextInt(0, ITEM_IDS.length - 1)] : undefined;
 
-    stairs.push({ floor, dir, x: curX, hasCoin, hasItem, isBooster });
+    stairs.push({ floor, dir, x: curX, hasCoin, isBooster });
     remaining--;
     justSwitched = false;
   }

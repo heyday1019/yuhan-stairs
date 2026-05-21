@@ -25,6 +25,6 @@ export async function registerUser(deviceId: string, nickname: string) {
   if (existing[0]) {
     return existing[0];
   }
-  const inserted = await db.insert(schema.users).values({ tossUserId, nickname: trimmed }).returning();
+  const inserted = await db.insert(schema.users).values({ tossUserId, nickname: trimmed, coins: 500 }).returning();
   return inserted[0];
 }
