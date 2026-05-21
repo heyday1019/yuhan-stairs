@@ -25,8 +25,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (!match || match.status !== 'active') return NextResponse.json({ error: 'invalid match' }, { status: 400 });
 
     // Server-side check: regenerate stairs from seed and verify coin pickup count is plausible.
+    // store.ts grants coins from three sources: hasCoin (+1), isBooster (+3), and every 5th
+    // combo (+1). The validator must mirror all three or honest 100-floor runs flag themselves.
     const stairs = generateStairs(match.stairSeed, match.mode);
-    const maxCoinsAvailable = stairs.slice(0, body.finalFloor).filter((s) => s.hasCoin).length;
+    const traversed = stairs.slice(0, body.finalFloor);
+    const coinStairs = traversed.filter((s) => s.hasCoin).length;
+    const boosterStairs = traversed.filter((s) => s.isBooster).length;
+    const maxComboBonus = Math.floor(body.finalFloor / 5);
+    const maxCoinsAvailable = coinStairs + boosterStairs * 3 + maxComboBonus;
     if (body.totalCoins > maxCoinsAvailable) {
       await db.update(schema.matches).set({ flagged: true }).where(eq(schema.matches.id, id));
       return NextResponse.json({ error: 'coins exceed available' }, { status: 400 });
