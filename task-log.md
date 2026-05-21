@@ -36,6 +36,7 @@
 4. **게임 중 코인만 픽업** (`dbbd710`): stair에 `?` 박스(아이템) 안 보임. `🪙` 코인만.
 5. **봇 매치 결과**: 100층 도달 → **"승리!"** + 코인 보상 (`dbbd710`+`02e0b26`로 fix됨)
    - result 화면 cyan 박스: `DEBUG end=reached_goal / won=true` 떠야 정상
+   - [x] 2026-05-22: 내 100 / 봇 98 / score 1422 / +61 / won=true 확인. **그러나 초기 렌더가 "패배" → 응답 후 "승리"로 flip**. result page `resp?.won ? '승리!' : '패배'`가 null fallback에서 패배로 떨어지는 race. **fix 적용**: 3-state로 분기 (`resp == null ? '집계 중...' : ...`) + 코인 row도 동일 패턴.
 6. **봇 매치 패배**: 봇이 먼저 100층 → **"패배"** + cyan 박스 `end=opponent_reached_goal / won=false`
 
 #### 검증 결과 분기
