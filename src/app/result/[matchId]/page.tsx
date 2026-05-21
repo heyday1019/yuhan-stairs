@@ -57,9 +57,11 @@ export default function ResultPage() {
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-slate-950 p-6 text-white">
       <h2 className="text-2xl font-bold">{resp?.won ? '승리!' : '패배'}</h2>
       <div className="text-center">
-        <div className="text-sm opacity-80">최종 층 {game.playerFloor} / {game.goalFloor}</div>
+        <div className="text-sm opacity-80">내 최종 층 {game.playerFloor} / {game.goalFloor}</div>
+        <div className="text-sm opacity-80">상대 최종 층 {game.opponentFloor} / {game.goalFloor}</div>
         <div className="text-sm opacity-80">점수 {resp?.score ?? '...'}</div>
         <div className="mt-4 text-amber-300">획득 코인 +{resp?.totalDelta ?? 0}</div>
+        <div className="mt-2 text-[10px] opacity-40">end={game.endedReason} won={String(resp?.won ?? '...')}</div>
       </div>
 
       {resp?.itemsUsed && resp.itemsUsed.length > 0 && (
