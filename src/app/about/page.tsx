@@ -17,7 +17,7 @@ const CHARACTERS = [
 
 export default function AboutPage() {
   return (
-    <main className="mx-auto max-w-md p-4 text-white">
+    <main className="mx-auto min-h-dvh max-w-md bg-slate-950 p-4 text-white">
       <h1 className="mb-4 text-xl font-bold">유한의 계단 레이스</h1>
       <p className="mb-2 text-sm text-slate-300">app-in-toss 1:1 계단 오르기 미니앱.</p>
 

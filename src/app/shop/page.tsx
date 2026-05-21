@@ -65,10 +65,10 @@ export default function ShopPage() {
     setTimeout(() => setToast(null), 2000);
   };
 
-  if (!data) return <main className="p-6 text-white">로딩…</main>;
+  if (!data) return <main className="min-h-dvh bg-slate-950 p-6 text-white">로딩…</main>;
 
   return (
-    <main className="mx-auto max-w-md p-4 text-white">
+    <main className="mx-auto min-h-dvh max-w-md bg-slate-950 p-4 text-white">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">상점</h1>
         <div className="text-sm">보유 코인 {data.coins}</div>
