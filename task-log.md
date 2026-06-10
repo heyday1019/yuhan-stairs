@@ -43,7 +43,7 @@
 
 ### 2. 검증 #1-4 통과 후 정리
 
-- [ ] **디버그 정보 제거** — `src/app/result/[matchId]/page.tsx`의 cyan `DEBUG end=... / won=... / err=...` 박스 + "결과 집계 실패" 헤더는 검증용. 정상 동작 확정되면 둘 다 제거. **상대 최종 층 라인은 영구 유지** (UX 도움). `endError` state 자체는 남겨두면 미래 디버깅에 유용 — UI에서만 빼는 게 안전.
+- [x] ~~**디버그 정보 제거**~~ — `ac78ab2` 완료. cyan DEBUG 박스 + "결과 집계 실패" 헤더 제거. 상대 최종 층 라인 + `endError` state 유지.
 - [ ] M3 spec `docs/superpowers/specs/2026-05-18-stair-race-m3-design.md` §12 "미해결 사항" 결과로 업데이트
 - [ ] M4 brainstorming 가능 (마리오 카트 스타일 아이템 박스 + 상대방 실제 캐릭터 등 백로그 정리)
 
