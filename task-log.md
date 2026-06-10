@@ -68,7 +68,7 @@ git push origin main
 
 - [x] ~~**디버그 정보 제거**~~ — `ac78ab2` 완료. cyan DEBUG 박스 + "결과 집계 실패" 헤더 제거. 상대 최종 층 라인 + `endError` state 유지.
 - [x] ~~M3 spec §12 "미해결 사항" 결과로 업데이트~~ — `612e510` 완료. 기존 7개 항목 결과 기록 + 신규 발견 4개 추가.
-- [ ] M4 brainstorming 가능 (마리오 카트 스타일 아이템 박스 + 상대방 실제 캐릭터 등 백로그 정리)
+- [x] ~~M4 brainstorming~~ — `3b4e5b1` 완료. 리더보드 + 이모티콘 spec/plan/구현 완료.
 
 ### 3. Phase 8 — 남은 모바일 QA 항목
 
