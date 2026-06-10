@@ -30,7 +30,7 @@ export function buildLeaderboardResult(
   return { entries, myEntry };
 }
 
-type DbWithExecute = {
+export type DbWithExecute = {
   execute: (q: ReturnType<typeof sql>) => Promise<{ rows: Record<string, unknown>[] }>;
 };
 
