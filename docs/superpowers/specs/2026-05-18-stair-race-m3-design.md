@@ -3,7 +3,7 @@
 - **작성일**: 2026-05-18
 - **상위 spec**: [`2026-05-13-stair-race-design.md`](./2026-05-13-stair-race-design.md)
 - **선행 마일스톤**: M2 (멀티플레이 코어) — 2026-05-15 코드 완료, 2026-05-18 QA 통과
-- **상태**: 초안 (사용자 검토 대기)
+- **상태**: M3 코드 완료 (2026-05-22). Phase 8 모바일 QA 진행 중 (PvP 아이템 검증 미완)
 
 ---
 
@@ -398,12 +398,32 @@ consumeShield(),            // 잘못 탭 무효화 시
 
 ---
 
-## 12. 미해결 사항
+## 12. 미해결 사항 (Phase 8 QA 결과 반영, 2026-05-22 기준)
 
-1. **mine 1초 정지가 100층 모드에서 적절한지** — CBT에서 체감 검증. 1.5초로 늘릴지, 0.7초로 줄일지.
-2. **bomb rate limit 10초** — 한 판 평균 80초에 8번 가능. 충분한지 / 너무 빈번한지 검증.
-3. **playbackRate 변경 vs crossfade** — playbackRate 1.15는 약간 떨어지는 트랙으로 들릴 수도 있음. fever_loop를 별도 트랙으로 둘지 vs 같은 트랙 가속할지 사용자 청취 후 결정.
-4. **아이콘 PNG vs 이모지** — M3 출시 시 PNG 필수인지, 이모지로 충분한지. 디자인 결정.
-5. **`items_used` jsonb 크기** — 한 매치당 평균 10 entries × 100바이트 = 1KB. 100만 매치도 1GB. 인덱스 불필요. 정리 정책 (90일 이후 archive) M4에서 결정.
-6. **카메라 lerp가 빠른 입력 시 시각적으로 따라가지 못하는 case** — 콤보 50에서 200ms 안에 +5층(beanstalk)이 들어오면 lerp 끝나기 전 다음 입력. test 후 lerp speed 조정 또는 즉시 이동 fallback.
-7. **`/about` 라우트 외에 라이선스 표기 위치** — Toss 미니앱 심사가 출처 표기 위치(footer / settings / about)를 어떻게 요구하는지 확인 필요.
+> **범례**: ✅ 해결 / ⬜ 미검증(PvP 필요) / 🔄 보류 / 📝 결정 변경
+
+1. **mine 1초 정지가 100층 모드에서 적절한지** ⬜ — PvP 2기기 매치 미진행으로 미검증. M4 CBT에서 1.5초/0.7초 조정 여부 결정.
+
+2. **bomb rate limit 10초** ⬜ — PvP 2기기 매치 미진행으로 미검증. 한 판 평균 80초에 8번 가능 — 여전히 보류.
+
+3. **playbackRate 변경 vs crossfade** 🔄 — BGM 트랙 미배치(`public/audio/` 비어있음). 트랙 배치 후 청취 테스트 시 결정.
+
+4. **아이콘 PNG vs 이모지** ✅ — **이모지(💣 💥 🌱 💀)로 운영 확정.** 게임·상점 모두 이모지로 동작 검증됨. PNG 교체는 선택적 미래 작업 (`public/sprites/items/`).
+
+5. **`items_used` jsonb 크기** 🔄 — 변동 없음. 정리 정책(90일 archive)은 M4에서 결정.
+
+6. **카메라 lerp가 빠른 입력 시 따라가지 못하는 case** ✅ — lerp 구현 완료, 모바일 QA에서 별도 보고 없음. beanstalk +5 동시 케이스는 미재현. 실용상 문제 없다고 판단, 재현 시 즉시 이동 fallback 추가.
+
+7. **`/about` 라우트 외 라이선스 표기 위치** 🔄 — BGM 트랙 미배치로 보류. 트랙 선택 후 CC-BY 여부 확인 → `/about` 페이지 `TRACKS` 배열에 추가하는 방식으로 확정.
+
+---
+
+### 신규 발견 사항 (Phase 8 QA, 2026-05-21~22)
+
+8. **게임 중 픽업 계단(? 박스) 제거** 📝 — spec §3.4의 "픽업 계단 ~2%"는 **제거됨** (commit `dbbd710`, 2026-05-21). 사용자 결정: "게임 중 코인만 줍고, 아이템은 상점에서만 구매". `stair-generator.ts`의 `FREE_ITEM_SPAWN_RATE` 로직 삭제. §3.4 공통 규칙 중 픽업 관련 항목은 더 이상 유효하지 않음.
+
+9. **bot 모드에서 아이템 사용 불가** 📝 — `/api/matches/[id]/items/use`가 `opp.userId` 없으면 400 반환. 봇 매치는 participants 1명이라 상대가 없음 → 아이템 use API 항상 실패. **PvP(ranked) 매치에서만 아이템 사용 가능.** spec 미언급 제약, M4 bot 강화 시 고려.
+
+10. **shop·about 페이지 다크 배경 누락** ✅ — `globals.css`의 `--background: #ffffff` 기본값이 Toss webview light mode에서 흰 배경을 유발. shop·about `<main>`에 `bg-slate-950` 명시로 fix (commit `ee39e5a`). 다른 모든 페이지는 이미 명시됨. `globals.css` default를 다크로 통일할지는 M4에서 결정.
+
+11. **ParallaxLayers 콤보 가속 미작동** 📝 — `ParallaxLayers`가 `fixed inset-0 -z-10`이라 `<main>`(bg-slate-950 opaque) 뒤에 완전히 가려짐. bg.png는 `<main>` 배경으로 직접 적용했으므로 배경 비주얼은 정상. 콤보 단계 패럴랙스 가속(spec §4.3)은 미작동 상태 — 백로그로 이동.
