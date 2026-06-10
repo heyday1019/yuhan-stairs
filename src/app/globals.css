@@ -42,3 +42,8 @@ body {
 }
 .fever-pulse { animation: fever-pulse 1.2s ease-in-out infinite; }
 
+@keyframes emoji-float {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+}
+.emoji-float { animation: emoji-float 2s forwards ease-out; }
