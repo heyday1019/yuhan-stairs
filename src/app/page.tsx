@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { NicknameModal } from '@/components/NicknameModal';
 import { MuteToggle } from '@/components/MuteToggle';
+import { LeaderboardMini } from '@/components/LeaderboardMini';
 import { apiFetch } from '@/lib/match-network';
 import { audio } from '@/lib/audio';
 
@@ -47,6 +48,7 @@ export default function HomePage() {
           >
             상점
           </Link>
+          <LeaderboardMini />
           <Link href="/about" className="text-xs text-slate-500 underline">정보</Link>
         </>
       )}
