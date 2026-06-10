@@ -20,6 +20,7 @@ export interface OpponentSyncAdapter {
     onMinePlaced?: (targetUserId: string, floor: number) => void;
     onBombTriggered?: (targetUserId: string, atMs: number, durationMs: number) => void;
     onBeanstalkUsed?: (userId: string, fromFloor: number, toFloor: number) => void;
+    onEmojiReceived?: (emoji: string) => void;
   }): void;
   sendTick(tick: { seq?: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: TickEvent }): void;
   sendFinish(payload: { finalFloor: number; finalScore: number; maxCombo: number; coins: number }): void;

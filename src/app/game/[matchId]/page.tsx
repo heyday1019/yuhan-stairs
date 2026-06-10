@@ -26,6 +26,7 @@ import { Container } from 'pixi.js';
 import type { OpponentSyncAdapter } from '@/game/sync/types';
 import type { StageTextures } from '@/game/stage';
 import { CHARACTER_STORAGE_KEY, DEFAULT_CHARACTER_ID, OPPONENT_FALLBACK_ID, getCharacter } from '@/game/characters';
+import { EmojiButton } from '@/components/EmojiButton';
 
 export default function GamePage() {
   const params = useParams<{ matchId: string }>();
@@ -45,6 +46,23 @@ export default function GamePage() {
   const myUserIdRef = useRef<string | null>(null);
   const stageRef = useRef<PixiContainer | null>(null);
   const [meta, setMeta] = useState<{ type: 'bot'|'ranked'; mode: number; seed: string|null; diff: 'easy'|'normal'|'hard' } | null>(null);
+  const [floatingEmoji, setFloatingEmoji] = useState<{ emoji: string; key: number } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevGapRef = useRef(0);
+
+  const myFloor = useGame((s) => s.playerFloor);
+  const opponentFloor = useGame((s) => s.opponentFloor);
+
+  const showToast = useCallback((msg: string, ms = 3000) => {
+    setToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), ms);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     apiFetch('/api/users/me')
@@ -82,6 +100,16 @@ export default function GamePage() {
       setMeta({ type, mode, seed: null, diff });
     }
   }, [params.matchId, init, setMatchStartAt]);
+
+  useEffect(() => {
+    const gap = myFloor - opponentFloor;
+    const prev = prevGapRef.current;
+    if (Math.abs(prev) < 5 && Math.abs(gap) >= 5) {
+      if (gap > 0) showToast('🎉 +5층 앞서고 있어요!');
+      else showToast('😱 상대가 5층 앞서갑니다!');
+    }
+    prevGapRef.current = gap;
+  }, [myFloor, opponentFloor, showToast]);
 
   useEffect(() => {
     // BGM: crossfade main_theme → game_loop while in-game. play() is a no-op
@@ -169,6 +197,10 @@ export default function GamePage() {
           if (myUserIdRef.current && userId === myUserIdRef.current) return;
           setOpponentFloor(to);
           void from;
+        },
+        onEmojiReceived: (emoji: string) => {
+          setFloatingEmoji({ emoji, key: Date.now() });
+          setTimeout(() => setFloatingEmoji(null), 2000);
         },
       });
       adapterRef.current = adapter;
@@ -314,6 +346,34 @@ export default function GamePage() {
         <CountdownOverlay startAtMs={matchStartAtMs} onDone={() => { /* state machine handles unlock via matchStartAtMs */ }} />
       )}
       {graceMs !== null && <WaitingOpponent remainingMs={graceMs} />}
+
+      {/* Floating emoji received from opponent */}
+      {floatingEmoji && (
+        <div
+          key={floatingEmoji.key}
+          className="emoji-float pointer-events-none fixed inset-x-0 top-24 z-50 flex justify-center"
+        >
+          <span className="text-6xl">{floatingEmoji.emoji}</span>
+        </div>
+      )}
+
+      {/* Overtake toast */}
+      {toast && (
+        <div className="pointer-events-none fixed left-1/2 top-20 z-50 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-sm text-white shadow-lg">
+          {toast}
+        </div>
+      )}
+
+      {/* Emoji send button — only during active ranked match */}
+      {meta?.type === 'ranked' && !ended && (
+        <EmojiButton
+          matchId={params.matchId}
+          onSent={(emoji) => {
+            setFloatingEmoji({ emoji, key: Date.now() });
+            setTimeout(() => setFloatingEmoji(null), 2000);
+          }}
+        />
+      )}
     </main>
   );
 }

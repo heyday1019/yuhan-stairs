@@ -36,6 +36,9 @@ export function createNetworkAdapter(matchId: string): OpponentSyncAdapter {
       channel.bind('beanstalk_used', (data: { userId: string; fromFloor: number; toFloor: number }) => {
         opts.onBeanstalkUsed?.(data.userId, data.fromFloor, data.toFloor);
       });
+      channel.bind('emoji_sent', (data: { userId: string; emoji: string }) => {
+        opts.onEmojiReceived?.(data.emoji);
+      });
 
       tickTimer = setInterval(() => {
         if (lastPayload) sendTickInner(lastPayload);
