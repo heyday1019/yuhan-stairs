@@ -8,17 +8,40 @@
 
 ---
 
-## 다음 진행할 작업 (2026-05-23 이어서 시작)
+## 다음 진행할 작업 (2026-06-10 이어서 시작)
 
-**M3 Phase 0-7 코드 완료 + Phase 8 모바일 QA 진행 중**. 마지막 prod = `ee39e5a`. 어제(2026-05-22) 봇 승/패 검증에서 4개 fix 추가 push. 검증 #5(승리), #6(패배), shop/about bg는 통과. 검증 #1-4 남음.
+**M4 코드 완료** (리더보드 + 이모티콘). 마지막 커밋 `b4565fe`. push 대기 중.
 
 ### 0. 세션 시작 시
 1. `task-log.md` 이 파일 읽기
-2. `git log --oneline -10` — 마지막 커밋 `ee39e5a` 확인
+2. `git log --oneline -10` — 마지막 커밋 `b4565fe` 확인
 3. `git status` — clean 확인
-4. `pnpm test` — 111 passing 확인
+4. `pnpm test` — 120 passing 확인
 
-### 1. 모바일 검증 — 남은 #1-4 항목 (최우선)
+### 1. M4 push + Vercel 배포
+
+```bash
+git push origin main
+```
+
+→ Vercel auto-deploy → https://yuhan-stairs.vercel.app
+
+### 2. M4 수동 QA (배포 후 모바일에서)
+
+- [ ] 홈 화면 하단 미니 위젯 — 닉네임 + 누적 점수 상위 3명 (없으면 "아직 데이터 없음")
+- [ ] "전체 보기 →" → `/leaderboard` 진입
+- [ ] 주간 / 전체 탭 전환 — URL `?tab=weekly|all` 반영
+- [ ] 10위 밖 유저 → 하단 sticky에 내 순위 표시
+- [ ] 10위 안 유저 → sticky 없음
+- [ ] 게임 화면 우상단 😊 버튼 표시 (ranked 매치만, ended 전)
+- [ ] 탭 → 랜덤 이모티콘 floating 애니메이션 (2초 후 사라짐)
+- [ ] 5초 내 재탭 → 버튼 비활성화 + 카운트다운
+- [ ] 5초 후 버튼 재활성
+- [ ] 격차 5층 이상 벌어질 때 추월 토스트 1회
+- [ ] 격차 유지 중 재발동 없음
+- [ ] 격차 좁혀졌다 다시 5 이상 → 재발동
+
+### 3. M3 모바일 검증 — 남은 #1-4 항목 (최우선)
 
 **모바일에서 하드 새로고침 후 순서대로**. 통과/실패 모두 보고하면 task-log 마크업.
 
@@ -188,6 +211,43 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 - 콤보 5/10/20/50 단계 시각 효과 강화, 카메라 lerp 가속, 배경 패럴랙스
 - WebAudio BGM (main/matching/game/fever/result 5슬롯, Pixabay/FMA 등 무료 라이선스)
 - 이모티콘/추월 알림은 M4로 미룸
+
+---
+
+## History — 2026-06-10 (M4 — 리더보드 + 이모티콘 코드 완료)
+
+세션 주제: M4 spec/plan → 8개 Task 전체를 Subagent-Driven Development로 구현. 총 **10개 커밋** (`373de60 → b4565fe`). push 대기 중.
+
+### 작업 흐름
+
+1. **M4 spec 작성** (`3b4e5b1`): 리더보드(주간/전체, Top 10, sticky my-rank, 홈 미니 위젯) + 이모티콘(버튼 1개, 탭=랜덤, 5초 쿨다운, 5층 격차 추월 토스트)
+2. **Task 1** (`373de60`): `src/server/leaderboard.ts` — `buildLeaderboardResult` (pure) + `getLeaderboard` (raw SQL). 5 unit tests.
+3. **Task 2** (`9764ce4` + `eccac93` + `fcc7247`): `GET /api/leaderboard` — tab/limit 파라미터 검증(NaN 처리, tab runtime validation) + `DbWithExecute` export.
+4. **Task 3** (`495cd9a`): `/leaderboard` 페이지 — 주간/전체 탭, skeleton, sticky my-rank, Suspense 경계.
+5. **Task 4** (`7721f87`): `LeaderboardMini` 컴포넌트 + 홈 페이지 하단 배치.
+6. **Task 5** (`1b8d8c0`): `src/server/emoji.ts` — `sendEmoji` DI 패턴 (참여자 확인 → Redis 쿨다운 → Pusher broadcast). 4 unit tests.
+7. **Task 6** (`9f97e78`): `POST /api/matches/[id]/emoji` — emoji 검증 (string, 8자 이하).
+8. **Task 7** (`d5437a4`): `EmojiButton` 컴포넌트 + `@keyframes emoji-float` CSS.
+9. **Task 8** (`b4565fe`): `types.ts` + `network-adapter.ts` + game 페이지 통합 — `onEmojiReceived`, 추월 토스트, floating emoji, EmojiButton JSX.
+
+### 주요 결정 사항
+
+- **DB 변경 없음** — `match_participants.final_score` 집계로 리더보드 구현
+- **이모티콘은 서버 저장 없음** — 클라이언트에서 랜덤 선택, Pusher로 broadcast만
+- **추월 감지는 클라이언트 전용** — `prevGapRef` + `useEffect`로 `|gap| < 5 → ≥ 5` 전환 감지
+- **`buildLeaderboardResult` pure function** — DB 없이 단위 테스트 가능하도록 분리
+- **`sendEmoji` DI 패턴** — `{ db, redis, pusher }` 주입으로 기존 codebase 패턴 유지
+
+### 테스트 상태
+
+- `pnpm test`: **120 passed (20 test files)** — 4개 신규 (emoji: 4, leaderboard: 5, 기존 111)
+- `pnpm exec tsc --noEmit`: exit 0
+
+### 세션 종료 시 git 상태
+
+- **origin/main = `ee39e5a`** (M4 커밋 10개는 아직 push 미완료)
+- **HEAD = `b4565fe`** — working tree clean
+- 다음 세션 시작 시 `git push origin main` 실행
 
 ---
 
