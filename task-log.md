@@ -8,124 +8,49 @@
 
 ---
 
-## 다음 진행할 작업 (2026-06-10 이어서 시작)
+## 다음 진행할 작업 (2026-06-10 세션 종료)
 
-**M4 코드 완료** (리더보드 + 이모티콘). 마지막 커밋 `b4565fe`. push 대기 중.
+**M4 코드 완료 + push 완료**. HEAD = `d0767c7`. prod 배포 중 → https://yuhan-stairs.vercel.app
 
-### 0. 세션 시작 시
+### 0. 다음 세션 시작 시
 1. `task-log.md` 이 파일 읽기
-2. `git log --oneline -10` — 마지막 커밋 `b4565fe` 확인
+2. `git log --oneline -5` — 마지막 커밋 `d0767c7` 확인
 3. `git status` — clean 확인
 4. `pnpm test` — 120 passing 확인
 
-### 1. M4 push + Vercel 배포
+### 1. 모바일 QA — M4 신규 기능 (최우선)
 
-```bash
-git push origin main
-```
+배포 후 **하드 새로고침**. 통과/실패 보고하면 task-log 마크업.
 
-→ Vercel auto-deploy → https://yuhan-stairs.vercel.app
-
-### 2. M4 수동 QA (배포 후 모바일에서)
-
-- [ ] 홈 화면 하단 미니 위젯 — 닉네임 + 누적 점수 상위 3명 (없으면 "아직 데이터 없음")
+- [ ] 홈 화면 하단 **리더보드 위젯** — 닉네임 + 누적 점수 상위 3명 (데이터 없으면 "아직 데이터 없어요")
 - [ ] "전체 보기 →" → `/leaderboard` 진입
 - [ ] 주간 / 전체 탭 전환 — URL `?tab=weekly|all` 반영
 - [ ] 10위 밖 유저 → 하단 sticky에 내 순위 표시
-- [ ] 10위 안 유저 → sticky 없음
-- [ ] 게임 화면 우상단 😊 버튼 표시 (ranked 매치만, ended 전)
-- [ ] 탭 → 랜덤 이모티콘 floating 애니메이션 (2초 후 사라짐)
-- [ ] 5초 내 재탭 → 버튼 비활성화 + 카운트다운
-- [ ] 5초 후 버튼 재활성
-- [ ] 격차 5층 이상 벌어질 때 추월 토스트 1회
-- [ ] 격차 유지 중 재발동 없음
-- [ ] 격차 좁혀졌다 다시 5 이상 → 재발동
+- [ ] 게임 화면 우상단 **😊 이모티콘 버튼** (ranked 매치, ended 전)
+- [ ] 탭 → 랜덤 이모티콘 floating 애니메이션 2초
+- [ ] 5초 내 재탭 → 버튼 비활성 + 카운트다운 ("5s"→"1s")
+- [ ] 격차 5층 벌어질 때 추월 토스트 1회 (좁혀졌다 다시 벌어지면 재발동)
 
-### 3. M3 모바일 검증 — 남은 #1-4 항목 (최우선)
+### 2. 모바일 QA — M3 미검증 항목
 
-**모바일에서 하드 새로고침 후 순서대로**. 통과/실패 모두 보고하면 task-log 마크업.
+- [ ] **#1 본인 코인 잔액** — 홈 좌상단 코인 표시. 새 가입 시 500 시작 보너스 확인.
+- [ ] **#2 상점 구매 UX** — 다크 배경 + 3종 카탈로그 + 잔액 부족 disabled + 구매 모달 + emerald 토스트
+- [ ] **#3 게임 ItemBar** — ControlPad 가운데 세로 3슬롯 + 라벨 + 튜토리얼 1회
+- [ ] **#4 코인만 픽업** — stair에 `?` 박스 없음, 🪙 코인만
 
-- [ ] **#1 본인 코인 잔액** — 홈 화면 좌상단 코인 표시 확인. 0 또는 매우 낮으면 device localStorage가 매번 새 user 만드는 케이스인지 닉네임 모달 빈도로 판단. 새 가입 시 `dbbd710` 시작 보너스 500이 자동 부여돼야 함. 그래도 0이면 root cause 분석.
+### 3. Phase 8 QA — 추가 항목 (혼자 + PvP)
 
-- [ ] **#2 상점 구매 UX** (`c315483`):
-  - `/shop` 다크 배경 + 보유 코인 잘 보이는지 (어제 `ee39e5a`로 fix됨)
-  - 카탈로그 3종 (🌱 잭콩 50 / 💥 지뢰 30 / 💣 폭탄 80)
-  - 잔액 부족 카드 → 구매 버튼 회색 disabled
-  - "구매" 탭 → 모달 `{이름} 구매 / {가격}코인을 사용합니다`
-  - 모달 "구매" → 하단 emerald 토스트 `{이름} 구매 완료! -N코인` 2초
-  - 보유 코인/보유 N 즉시 갱신
+#### 혼자 가능
+- [ ] 봇 매치 → bg.png 배경 + ItemBar 슬롯 + 콤보 단계 시각 효과 + FEVER 펄스
+- [ ] `/shop` 카탈로그 + 슬롯 장착 + `/mode-select` 미리보기
 
-- [ ] **#3 게임 화면 ItemBar** (`c315483`):
-  - ControlPad ◀ ▶ 좌우 양 끝
-  - 가운데 하단에 **세로 3슬롯 ItemBar** + 슬롯 아래 아이템 이름 (text-[10px])
-  - 첫 진입 시 튜토리얼 팝업 1회 ("슬롯을 탭하면 사용돼요")
+#### PvP (두 탭/기기 필요)
+- [ ] ranked 매치 → beanstalk/mine/bomb 아이템 동작
+- [ ] 결과 화면 "사용 아이템" 이력
 
-- [ ] **#4 게임 중 코인만 픽업** (`dbbd710`):
-  - stair에 `?` 박스(아이템) **없음**, 🪙 코인만 떨어짐 (booster 황금 stair는 정상)
-  - 픽업한 코인은 게임 후 잔액 +N 합산되는지 확인 (이미 봇 패배 결과 +37 확인됨 → OK)
-
-### 2. 검증 #1-4 통과 후 정리
-
-- [x] ~~**디버그 정보 제거**~~ — `ac78ab2` 완료. cyan DEBUG 박스 + "결과 집계 실패" 헤더 제거. 상대 최종 층 라인 + `endError` state 유지.
-- [x] ~~M3 spec §12 "미해결 사항" 결과로 업데이트~~ — `612e510` 완료. 기존 7개 항목 결과 기록 + 신규 발견 4개 추가.
-- [x] ~~M4 brainstorming~~ — `3b4e5b1` 완료. 리더보드 + 이모티콘 spec/plan/구현 완료.
-
-### 3. Phase 8 — 남은 모바일 QA 항목
-
-어제 검증 못한 항목들 (PvP/ranked 매치 필요한 부분 위주):
-
-#### 1단계: 상점 / 슬롯 (혼자 가능)
-- [ ] `/shop` 진입 → 카탈로그 3종 (🌱 사다리 잭콩 50 / 💥 지뢰 30 / 💣 시한폭탄 80) + 보유 코인 표시
-- [ ] 잔액 부족 아이템 → 구매 버튼 **회색(disabled)**
-- [ ] 1개 구매 → 코인 차감 + 보유 +1
-- [ ] 슬롯 3개에 인벤토리 탭으로 장착 (남은 수량 정확히 감소)
-- [ ] `/mode-select`에서 "장착된 아이템" 미리보기 슬롯 3개 표시
-- [ ] "장착 변경" 링크 → `/shop`으로 돌아감
-
-#### 2단계: 게임 중 콤보 폴리시 (봇 모드로 혼자 가능)
-- [ ] 모드 선택 → 매칭 → 봇 매치 (자동 봇 대전, 10초 후 또는 "봇과 지금 시작")
-- [ ] 게임 화면에 **bg.png 큐브 배경** 보임 + Pixi 계단/캐릭터가 그 위에 렌더
-- [ ] 좌하단 **ItemBar 슬롯 3개** 표시 (장착했다면 emoji 보이고, 봇은 use 안 됨)
-- [ ] 콤보 5/10/20/50 단계에서 lerp 가속 + parallax 가속 체감
-- [ ] 콤보 20 진입 + 잘못 탭 1.5s 안 → `🛡️ 실드!` 토스트, 후퇴 0
-- [ ] 콤보 50+ 진입 → FEVER 모서리 펄스 (분홍색 inset 그림자)
-- [ ] BGM mp3 없으니 BGM은 무음 (정상)
-
-#### 3단계: PvP 아이템 (ranked 매치 필요)
-> 봇 모드에서는 `/api/matches/[id]/items/use`가 `opp.userId` 없어서 400 반환 → 아이템 use 불가.
-> **두 모바일 기기** 또는 **모바일 + 시크릿 탭(다른 닉네임)**으로 동시에 매칭하면 짝지어짐.
-
-- [ ] 두 탭/기기로 동시에 매칭 → 같은 매치 진입
-- [ ] beanstalk 탭 → 본인 즉시 +5층 점프 + 콤보 유지 + 슬롯 비워짐 + `🌱 +5!` 토스트
-- [ ] mine 탭 → 상대 화면에 mine 표시 (💀 해골) + 본인 화면 슬롯 비워짐
-- [ ] 상대가 mine floor 밟음 → 1초 정지 + 상대 화면 mine 사라짐
-- [ ] bomb 탭 → 본인 슬롯 비워짐, 3초 후 상대 화면 1.5초 어두워짐 (게임 진행에는 영향 없음)
-- [ ] 픽업 계단 (? 박스) 밟음 → 슬롯 빈 자리에 아이템 추가
-- [ ] 슬롯 full에서 픽업 → 무시 (서버에서 broadcast 안 됨)
-
-#### 4단계: 결과 화면
-- [ ] 매치 한 판 후 결과 페이지에 "사용 아이템" 이력 표시 (나/상대 라벨 + emoji + 이름)
-- [ ] result_jingle 무음 (mp3 없으니 정상, 파일 있으면 1회 재생)
-
-#### 5단계: 어뷰징 방어 (선택, 시간 되면)
-- [ ] DevTools에서 슬롯 미장착 itemId use API 직접 호출 → 400 + `flaggedCount++` (Neon db:studio로 확인)
-- [ ] DevTools에서 인벤토리 0 itemId buy → 거부 ('not enough items' 등)
-
-#### 6단계: BGM/`/about` (선택)
-- [ ] mute 토글 → BGM/SFX 멈춤 (현재 BGM 무음이지만 localStorage 저장 확인)
-- [ ] `/about` 페이지 출력 (BGM 출처 + 캐릭터 출처)
-
-### 2. QA 통과 후 정리
-- 통과 항목은 task-log에서 [x]로 체크
-- 실패 항목이 있으면 fix commit → push → Vercel auto-deploy
-- 모두 통과 시: M3 spec § 12 "미해결 사항"을 결과와 함께 업데이트하여 commit
-- M4 brainstorming 시작 가능
-
-### 3. 옵션 — 코인 추가 필요 시
-QA 도중 코인이 또 부족하면:
+### 4. 옵션 — 코인 부족 시
 ```bash
 node scripts/grant-coins.mjs          # 기본 500까지 top-up
-# 또는
 GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 ```
 
@@ -145,7 +70,7 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 - [ ] **bg.png 다른 페이지에도 적용?** — 현재는 /game만. 홈/매칭/결과에도 깔지 결정 (UI 가독성 테스트 필요).
 - [ ] **Vercel 대시보드에서 Pusher 6개 env BOM 재등록** (이전 세션 미완료) — [[feedback-vercel-cli-agent-preview]] 참조
 - [ ] **상대방 실제 캐릭터 표시** — 지금은 고정 `crystal-tophat` fallback. 옵션 A (Redis match payload에 character 추가) vs 옵션 B (DB users.character_id 컬럼). M4 또는 별도 마일스톤.
-- [ ] **마리오 카트 스타일 아이템 박스** (사용자 제안 2026-05-21) — 현재 3슬롯 픽업/구매/장착 모델을 갈아엎고 "픽업 → 룰렛 회전 → 클릭 시 랜덤 아이템 투척" 메카닉. M4 brainstorming 으로 가져갈 것.
+- [ ] **마리오 카트 스타일 아이템 박스** (사용자 제안 2026-05-21) — 현재 3슬롯 픽업/구매/장착 모델을 갈아엎고 "픽업 → 룰렛 회전 → 클릭 시 랜덤 아이템 투척" 메카닉. M5 brainstorming 후보.
 
 ---
 
@@ -192,6 +117,24 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 
 ---
 
+## M4 진행 상태 표
+
+| Task | 파일 | 상태 | Commit |
+|---|---|---|---|
+| 1 | `src/server/leaderboard.ts` + tests | ✅ | `373de60` |
+| 2 | `GET /api/leaderboard` + param validation | ✅ | `9764ce4`+`eccac93`+`fcc7247` |
+| 3 | `/leaderboard` page (탭 + sticky my-rank) | ✅ | `495cd9a` |
+| 4 | `LeaderboardMini` + 홈 페이지 배치 | ✅ | `7721f87` |
+| 5 | `src/server/emoji.ts` + tests | ✅ | `1b8d8c0` |
+| 6 | `POST /api/matches/[id]/emoji` | ✅ | `9f97e78` |
+| 7 | `EmojiButton` + `emoji-float` keyframe | ✅ | `d5437a4` |
+| 8 | types.ts + network-adapter + game 통합 | ✅ | `b4565fe` |
+| QA | 수동 QA (모바일) | ⬜ | 사용자 작업 |
+
+**8/8 코드 완료**. 수동 QA만 남음.
+
+---
+
 ## 진실 소스 / 빠른 참조
 
 - **M3 spec**: `docs/superpowers/specs/2026-05-18-stair-race-m3-design.md` (commit `b61559a`, 수정 `e1575f2`)
@@ -199,7 +142,9 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 - **M2 spec**: `docs/superpowers/specs/2026-05-15-stair-race-m2-design.md`
 - **M2 plan**: `docs/superpowers/plans/2026-05-15-stair-race-m2.md` (gitignored)
 - **M1 spec**: `docs/superpowers/specs/2026-05-13-stair-race-design.md`
-- **Production**: https://yuhan-stairs.vercel.app — 현재 `ee39e5a` 배포 중
+- **M4 spec**: `docs/superpowers/specs/2026-06-10-stair-race-m4-design.md` (commit `3b4e5b1`)
+- **M4 plan**: `docs/superpowers/plans/2026-06-10-stair-race-m4.md` (gitignored, 8 task)
+- **Production**: https://yuhan-stairs.vercel.app — 현재 `d0767c7` 배포 중
 - **Vercel project**: nicks-projects-eb6dc4a3/yuhan-stairs
 - **GitHub repo**: https://github.com/heyday1019/yuhan-stairs
 
@@ -214,9 +159,9 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 
 ---
 
-## History — 2026-06-10 (M4 — 리더보드 + 이모티콘 코드 완료)
+## History — 2026-06-10 (M4 — 리더보드 + 이모티콘 코드 완료 + push)
 
-세션 주제: M4 spec/plan → 8개 Task 전체를 Subagent-Driven Development로 구현. 총 **10개 커밋** (`373de60 → b4565fe`). push 대기 중.
+세션 주제: M4 spec/plan → 8개 Task 전체를 Subagent-Driven Development로 구현 → push 완료. 총 **12개 커밋** (`373de60 → d0767c7`).
 
 ### 작업 흐름
 
@@ -245,9 +190,10 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 
 ### 세션 종료 시 git 상태
 
-- **origin/main = `ee39e5a`** (M4 커밋 10개는 아직 push 미완료)
-- **HEAD = `b4565fe`** — working tree clean
-- 다음 세션 시작 시 `git push origin main` 실행
+- **origin/main = HEAD = `d0767c7`** (push 완료, ahead 0)
+- working tree clean
+- prod 배포: https://yuhan-stairs.vercel.app — Vercel auto-deploy 완료
+- 이번 세션 신규 commits: **12개** (`3b4e5b1` spec → `d0767c7` task-log)
 
 ---
 
