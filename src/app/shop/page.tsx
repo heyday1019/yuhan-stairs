@@ -1,140 +1,139 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShopItemCard } from '@/components/ShopItemCard';
-import { SlotPicker } from '@/components/SlotPicker';
 import { apiFetch } from '@/lib/match-network';
-import type { ItemMeta } from '@/shared/items-catalog';
+import type { BoostId } from '@/shared/shop-catalog';
+import { getCharacter } from '@/game/characters';
 
-interface ShopData {
-  catalog: ItemMeta[];
-  inventory: Record<string, number>;
+interface CatalogData {
   coins: number;
-}
-
-interface PendingBuy {
-  itemId: string;
-  qty: number;
-  name: string;
-  totalPrice: number;
+  characterId: string;
+  activeBoosts: BoostId[];
+  boosts: readonly { id: string; label: string; price: number; games: number }[];
+  cosmetics: readonly { characterId: string; label: string; price: number }[];
 }
 
 export default function ShopPage() {
   const router = useRouter();
-  const [data, setData] = useState<ShopData | null>(null);
-  const [slots, setSlots] = useState<(string | null)[]>([null, null, null]);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingBuy | null>(null);
+  const [tab, setTab] = useState<'boost' | 'cosmetic'>('boost');
+  const [catalog, setCatalog] = useState<CatalogData | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ type: 'boost' | 'cosmetic'; id: string; label: string; price: number } | null>(null);
 
-  const reload = () =>
-    apiFetch('/api/shop/items')
-      .then((r) => r.json())
-      .then((d: ShopData) => { setData(d); setError(null); })
-      .catch((e: Error) => setError(e.message));
+  const load = () => {
+    apiFetch('/api/shop/catalog').then(r => r.json()).then(setCatalog).catch(() => {});
+  };
 
-  useEffect(() => {
-    reload();
-    try {
-      const saved = sessionStorage.getItem('pending_equipped_slots');
-      if (saved) setSlots(JSON.parse(saved));
-    } catch {}
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  const onBuy = (itemId: string, qty: number) => {
-    const meta = data?.catalog.find((m) => m.id === itemId);
-    if (!meta) return;
-    setPending({ itemId, qty, name: meta.name, totalPrice: meta.price * qty });
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
   };
 
   const confirmBuy = async () => {
-    if (!pending) return;
-    const { itemId, qty, name, totalPrice } = pending;
-    setPending(null);
+    if (!modal) return;
+    setModal(null);
     const res = await apiFetch('/api/shop/buy', {
       method: 'POST',
-      body: JSON.stringify({ itemId, qty }),
+      body: JSON.stringify({ type: modal.type, id: modal.id }),
     });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j?.error ?? '구매 실패');
-      return;
-    }
-    await reload();
-    setToast(`${name} 구매 완료! -${totalPrice}코인`);
-    setTimeout(() => setToast(null), 2000);
+    const json = await res.json();
+    if (!res.ok) { showToast(`오류: ${json.error}`); return; }
+    showToast('✅ 구매 완료!');
+    load();
   };
 
-  if (!data) return <main className="min-h-dvh bg-slate-950 p-6 text-white">로딩…</main>;
-
   return (
-    <main className="mx-auto min-h-dvh max-w-md bg-slate-950 p-4 text-white">
-      <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">상점</h1>
-        <div className="text-sm">보유 코인 {data.coins}</div>
+    <main className="flex min-h-dvh flex-col bg-slate-950 text-white">
+      <header className="flex items-center justify-between p-4">
+        <button onClick={() => router.back()} className="text-slate-400">← 뒤로</button>
+        <span className="font-bold">상점</span>
+        <span className="text-amber-300 text-sm">💰 {catalog?.coins ?? '…'}</span>
       </header>
 
-      {error && <div className="mb-3 rounded bg-rose-900 px-3 py-2 text-xs">{error}</div>}
+      {/* 탭 */}
+      <div className="flex border-b border-slate-700">
+        {(['boost', 'cosmetic'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-3 text-sm font-semibold ${tab === t ? 'border-b-2 border-amber-400 text-amber-400' : 'text-slate-400'}`}
+          >
+            {t === 'boost' ? '부스트' : '코스메틱'}
+          </button>
+        ))}
+      </div>
 
-      <section className="mb-6">
-        <h2 className="mb-2 text-sm text-slate-400">아이템 구매</h2>
-        <div className="flex flex-col gap-2">
-          {data.catalog.map((meta) => (
-            <ShopItemCard
-              key={meta.id}
-              meta={meta}
-              owned={data.inventory[meta.id] ?? 0}
-              coins={data.coins}
-              onBuy={(q) => onBuy(meta.id, q)}
-            />
-          ))}
+      {/* 부스트 탭 */}
+      {tab === 'boost' && (
+        <div className="flex flex-col gap-3 p-4">
+          {catalog?.boosts.map((b) => {
+            const active = catalog.activeBoosts.filter(id => id === b.id).length;
+            return (
+              <div key={b.id} className="flex items-center justify-between rounded-xl bg-slate-800 px-4 py-3">
+                <div>
+                  <div className="font-semibold">{b.label}</div>
+                  {active > 0 && <div className="text-xs text-emerald-400">{active * b.games}판 남음</div>}
+                </div>
+                <button
+                  onClick={() => setModal({ type: 'boost', id: b.id, label: b.label, price: b.price })}
+                  className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-amber-900"
+                >
+                  {b.price}코인
+                </button>
+              </div>
+            );
+          })}
         </div>
-      </section>
+      )}
 
-      <section className="mb-6">
-        <h2 className="mb-2 text-sm text-slate-400">다음 매치 슬롯</h2>
-        <SlotPicker
-          inventory={data.inventory}
-          initialSlots={slots}
-          onChange={(s) => {
-            setSlots(s);
-            try { sessionStorage.setItem('pending_equipped_slots', JSON.stringify(s)); } catch {}
-          }}
-        />
-      </section>
-
-      <button
-        onClick={() => router.push('/mode-select')}
-        className="w-full rounded-2xl bg-amber-400 px-6 py-4 text-lg font-extrabold text-amber-900"
-      >
-        모드 선택으로
-      </button>
-
-      {pending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-xs rounded-2xl bg-slate-800 p-6 text-white">
-            <p className="mb-1 text-base font-bold">{pending.name} 구매</p>
-            <p className="mb-4 text-sm text-slate-300">{pending.totalPrice}코인을 사용합니다.</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPending(null)}
-                className="flex-1 rounded-xl bg-slate-700 py-2 text-sm font-bold"
+      {/* 코스메틱 탭 */}
+      {tab === 'cosmetic' && (
+        <div className="grid grid-cols-3 gap-3 p-4">
+          {catalog?.cosmetics.map((c) => {
+            const owned = catalog.characterId === c.characterId;
+            const char = getCharacter(c.characterId);
+            return (
+              <div
+                key={c.characterId}
+                className={`flex flex-col items-center gap-1 rounded-xl bg-slate-800 p-3 ${owned ? 'ring-2 ring-emerald-400' : ''}`}
               >
-                취소
-              </button>
-              <button
-                onClick={confirmBuy}
-                className="flex-1 rounded-xl bg-amber-400 py-2 text-sm font-bold text-amber-900"
-              >
-                구매
-              </button>
+                <img src={char.idle} alt={c.label} className="h-12 w-12 object-contain" />
+                <span className="text-xs font-semibold">{c.label}</span>
+                {owned ? (
+                  <span className="text-xs text-emerald-400">✓ 장착 중</span>
+                ) : (
+                  <button
+                    onClick={() => setModal({ type: 'cosmetic', id: c.characterId, label: c.label, price: c.price })}
+                    className="rounded-md bg-amber-400 px-2 py-1 text-xs font-bold text-amber-900"
+                  >
+                    {c.price === 0 ? '무료' : `${c.price}코인`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 구매 확인 모달 */}
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => setModal(null)}>
+          <div className="w-full rounded-t-2xl bg-slate-800 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-lg font-bold">{modal.label} 구매</h3>
+            <p className="mb-6 text-slate-300">{modal.price}코인을 사용합니다.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setModal(null)} className="flex-1 rounded-xl bg-slate-700 py-3 font-semibold">취소</button>
+              <button onClick={confirmBuy} className="flex-1 rounded-xl bg-amber-400 py-3 font-bold text-amber-900">확인</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* 토스트 */}
       {toast && (
-        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white shadow-lg">
+        <div className="pointer-events-none fixed bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg">
           {toast}
         </div>
       )}
