@@ -4,11 +4,8 @@ import { getCurrentUserFromHeaders, AuthError } from '@/server/auth';
 import { db, schema } from '@/server/db';
 import { getRedis } from '@/server/redis';
 import { getPusher } from '@/server/pusher';
+import { MINE_REACH, BOMB_FUSE_MS, BOMB_DURATION_MS, LIGHTNING_DURATION_MS } from '@/shared/constants';
 
-const MINE_REACH = 5;
-const BOMB_FUSE_MS = 3000;
-const BOMB_DURATION_MS = 1500;
-const LIGHTNING_DURATION_MS = 2500;
 const BOX_RATE_LIMIT_TTL_S = 3;
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -45,7 +42,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (itemId === 'mine') {
       const stateKey = `match:state:${matchId}:${opp.userId}`;
       const stored = await r.get(stateKey);
-      const oppState = stored ? JSON.parse(stored) : { lastFloor: 0 };
+      let oppState: { lastFloor?: number } = { lastFloor: 0 };
+      try {
+        if (stored) oppState = JSON.parse(stored);
+      } catch {
+        // malformed state → treat as floor 0
+      }
       const oppFloor = oppState.lastFloor ?? 0;
       const targetFloor = oppFloor + 1 + Math.floor(Math.random() * MINE_REACH);
       await pusher.trigger(channel, 'mine_placed', { targetUserId: opp.userId, floor: targetFloor });

@@ -4,6 +4,11 @@ export type Mode = typeof MODES[number];
 export const ITEM_IDS = ['bomb', 'mine', 'beanstalk', 'lightning'] as const;
 export type ItemId = typeof ITEM_IDS[number];
 
+export const MINE_REACH = 5;
+export const BOMB_FUSE_MS = 3000;
+export const BOMB_DURATION_MS = 1500;
+export const LIGHTNING_DURATION_MS = 2500;
+
 export const COIN_SPAWN_RATE = 0.12;
 export const BOOSTER_SPAWN_RATE = 0.04;
 
