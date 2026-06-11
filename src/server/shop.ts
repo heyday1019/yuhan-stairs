@@ -12,7 +12,7 @@ export function getCatalog(): readonly ItemMeta[] {
 
 export async function getInventoryFor(db: Db, userId: string): Promise<Record<ItemId, number>> {
   const rows = await db.select().from(schema.inventoryItems).where(eq(schema.inventoryItems.userId, userId));
-  const out: Record<ItemId, number> = { bomb: 0, mine: 0, beanstalk: 0 };
+  const out: Record<ItemId, number> = { bomb: 0, mine: 0, beanstalk: 0, lightning: 0 };
   for (const r of rows) {
     if (r.itemId in out) out[r.itemId as ItemId] = r.quantity;
   }

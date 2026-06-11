@@ -13,7 +13,7 @@ describe('shop', () => {
       select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }),
     } as any;
     const inv = await getInventoryFor(fakeDb, 'user-1');
-    expect(inv).toEqual({ bomb: 0, mine: 0, beanstalk: 0 });
+    expect(inv).toEqual({ bomb: 0, mine: 0, beanstalk: 0, lightning: 0 });
   });
 
   it('getInventoryFor merges rows over zeros', async () => {
@@ -24,7 +24,7 @@ describe('shop', () => {
       ]) }) }),
     } as any;
     const inv = await getInventoryFor(fakeDb, 'user-1');
-    expect(inv).toEqual({ bomb: 2, mine: 5, beanstalk: 0 });
+    expect(inv).toEqual({ bomb: 2, mine: 5, beanstalk: 0, lightning: 0 });
   });
 });
 

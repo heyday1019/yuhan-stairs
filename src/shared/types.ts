@@ -1,4 +1,4 @@
-import type { ItemId, Mode } from './constants';
+import type { Mode } from './constants';
 
 export type Direction = 'L' | 'R';
 
@@ -7,7 +7,6 @@ export interface Stair {
   dir: Direction;
   x: number;                 // world-space x of stair left edge (px)
   hasCoin: boolean;
-  hasItem?: ItemId;
   isBooster: boolean;
 }
 

@@ -4,7 +4,7 @@ import type { Stair } from '@/shared/types';
 
 const stairs: Stair[] = Array.from({ length: 100 }, (_, i) => ({
   floor: i + 1, dir: i % 2 === 0 ? 'L' : 'R', x: 60, hasCoin: false,
-  isBooster: i === 9 || i === 19, hasItem: undefined,
+  isBooster: i === 9 || i === 19,
 }));
 
 const baseState = (over: Partial<ValidatorState> = {}): ValidatorState => ({

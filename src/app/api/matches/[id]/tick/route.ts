@@ -95,21 +95,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     await r.set(stateKey, JSON.stringify(nextState), { ex: 90 });
 
-    // Pickup handling — first time arriving at a hasItem stair (only ascending past lastFloor)
-    const currentStair = stairs[tick.floor - 1];
-    if (currentStair?.hasItem && tick.floor > prev.lastFloor) {
-      const equippedKey = `match:equipped:${matchId}:${user.id}`;
-      const slots = await r.lrange(equippedKey, 0, -1);
-      if (slots.length < 3) {
-        await r.rpush(equippedKey, currentStair.hasItem);
-        await r.expire(equippedKey, 90);
-        await pusher.trigger(`presence-match-${matchId}`, 'item_picked', {
-          userId: user.id, itemId: currentStair.hasItem, floor: tick.floor, slotIndex: slots.length,
-        });
-      }
-      // slot full → silently ignore (no broadcast, no animation per spec)
-    }
-
     const participants = await db.select().from(schema.matchParticipants).where(eq(schema.matchParticipants.matchId, matchId));
     const opponent = participants.find((p) => p.userId !== user.id);
     if (opponent?.userId) {

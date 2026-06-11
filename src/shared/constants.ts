@@ -1,12 +1,11 @@
 export const MODES = [100, 200, 300, 500, 800] as const;
 export type Mode = typeof MODES[number];
 
-export const ITEM_IDS = ['bomb', 'mine', 'beanstalk'] as const;
+export const ITEM_IDS = ['bomb', 'mine', 'beanstalk', 'lightning'] as const;
 export type ItemId = typeof ITEM_IDS[number];
 
 export const COIN_SPAWN_RATE = 0.12;
 export const BOOSTER_SPAWN_RATE = 0.04;
-export const FREE_ITEM_SPAWN_RATE = 0.02;
 
 export const MAX_RUN_LENGTH = 5;
 export const MIN_RUN_LENGTH = 1;
