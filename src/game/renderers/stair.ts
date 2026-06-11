@@ -12,6 +12,7 @@ const SPRITE_Y_OFFSET = -(STAIR_SPRITE_H - TREAD_BAND); // pushes cube body up s
 
 interface RenderStairOpts {
   isMine?: boolean;
+  isBox?: boolean;
 }
 
 export function renderStair(world: Container, stair: Stair, tex: Texture, opts: RenderStairOpts = {}): Container {
@@ -31,6 +32,17 @@ export function renderStair(world: Container, stair: Stair, tex: Texture, opts: 
   if (stair.hasCoin) {
     const coin = new Graphics().circle(STAIR_W / 2, -32, 12).fill(0xfbbf24).stroke({ color: 0xd97706, width: 2 });
     node.addChild(coin);
+  }
+  if (opts.isBox) {
+    const box = new Graphics()
+      .rect(STAIR_W / 2 - 12, -52, 24, 24)
+      .fill({ color: 0xffaa00, alpha: 0.9 })
+      .stroke({ color: 0x7a4a00, width: 2 });
+    node.addChild(box);
+    const q = new Text({ text: '?', style: { fontSize: 16, fontWeight: '700', fill: 0xffffff } });
+    q.x = STAIR_W / 2 - 5;
+    q.y = -52;
+    node.addChild(q);
   }
   if (opts.isMine) {
     const skull = new Text({ text: '💀', style: { fontSize: 22 } });
