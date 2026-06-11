@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   totalXp: integer('total_xp').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   lastPlayedAt: timestamp('last_played_at', { withTimezone: true }),
+  characterId: text('character_id').notNull().default('pink-beanie'),
 });
 
 export const matches = pgTable('matches', {
@@ -57,4 +58,14 @@ export const inventoryItems = pgTable('inventory_items', {
   quantity: integer('quantity').notNull().default(0),
 }, (t) => ({
   pk: uniqueIndex('inventory_items_pk').on(t.userId, t.itemId),
+}));
+
+export const userBoosts = pgTable('user_boosts', {
+  id:             uuid('id').primaryKey().defaultRandom(),
+  userId:         uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  boostType:      text('boost_type').notNull(),
+  gamesRemaining: integer('games_remaining').notNull(),
+  createdAt:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index('user_boosts_user_id_idx').on(t.userId),
 }));
