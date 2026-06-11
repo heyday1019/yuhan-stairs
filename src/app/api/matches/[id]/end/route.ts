@@ -4,6 +4,7 @@ import { db, schema } from '@/server/db';
 import { eq } from 'drizzle-orm';
 import { getCurrentUserFromHeaders, AuthError } from '@/server/auth';
 import { finalizeBotMatch } from '@/server/economy';
+import { consumeBoosts } from '@/server/boosts';
 import { generateStairs } from '@/shared/stair-generator';
 import { FAIL_PENALTY_FLOORS, type Mode } from '@/shared/constants';
 
@@ -59,6 +60,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       totalCoins: body.totalCoins,
       failCount: body.failCount,
     });
+
+    // 매치 종료 시 부스트 소비 (games_remaining -1, 0이면 삭제)
+    try {
+      await db.transaction(async (tx: any) => {
+        await consumeBoosts(tx, user.id);
+      });
+    } catch {
+      // 부스트 소비 실패는 매치 결과에 영향 없음 (silent)
+    }
 
     return NextResponse.json({ ...result, itemsUsed: match.itemsUsed ?? [] });
   } catch (e) {
