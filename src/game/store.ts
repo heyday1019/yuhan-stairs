@@ -1,17 +1,10 @@
 import { create } from 'zustand';
 import type { Stair, FinalResult, BotDifficulty } from '@/shared/types';
 import type { MatchEnded } from './sync/types';
-import { createComboState, onCorrectTap, onFail, onTimeoutCheck, type ComboState } from '@/shared/combo';
+import { createComboState, onCorrectTap, onTimeoutCheck, type ComboState } from '@/shared/combo';
 import { FAIL_PENALTY_FLOORS } from '@/shared/constants';
-import { apiFetch } from '@/lib/match-network';
 
-const SHIELD_WINDOW_MS = 1500;
 const MINE_LOCK_MS = 1000;
-
-interface UseResultBeanstalk { kind: 'beanstalk'; userId: string; fromFloor: number; toFloor: number; }
-interface UseResultMine { kind: 'mine'; targetUserId: string; targetFloor: number; }
-interface UseResultBomb { kind: 'bomb'; targetUserId: string; triggerAtMs: number; durationMs: number; }
-type UseResult = UseResultBeanstalk | UseResultMine | UseResultBomb;
 
 interface GameState {
   matchId: string | null;
@@ -31,15 +24,11 @@ interface GameState {
   opponentDisconnectedGraceMs: number | null;
   emoji: { from: 'me' | 'opp'; symbol: string; at: number } | null;
 
-  // M3 fields
-  equippedSlots: (string | null)[];
-  inventory: Record<string, number>;
+  // M3 receive-side fields (kept)
   mines: number[];
   bombActiveUntilMs: number | null;
   beanstalkJumpAt: { fromFloor: number; toFloor: number; atMs: number } | null;
-  shieldArmedUntilMs: number;
-  shieldConsumed: boolean;
-  pendingTickEvent: 'beanstalk_use' | 'mine_hit' | 'shield_used' | null;
+  pendingTickEvent: 'beanstalk_use' | 'mine_hit' | null;
 
   init(args: { matchId: string; goalFloor: number; stairs: Stair[]; botDifficulty: BotDifficulty }): void;
   handleTap(dir: 'L' | 'R', atMs: number): void;
@@ -52,17 +41,11 @@ interface GameState {
   applyMatchEnded(payload: MatchEnded): void;
   end(reason: FinalResult['endReason']): void;
 
-  // M3 actions
-  setEquippedSlots(slots: (string | null)[]): void;
-  setInventory(inv: Record<string, number>): void;
-  useSlot(index: number): Promise<void>;
+  // M3 receive-side actions (kept)
   applyMine(floor: number): void;
   applyBomb(atMs: number, durationMs: number): void;
   applyBeanstalkJump(from: number, to: number, atMs: number): void;
-  applyItemPicked(itemId: string, slotIndex: number): void;
-  armShield(atMs: number): void;
-  consumeShield(): void;
-  consumePendingTickEvent(): 'beanstalk_use' | 'mine_hit' | 'shield_used' | null;
+  consumePendingTickEvent(): 'beanstalk_use' | 'mine_hit' | null;
 }
 
 export const useGame = create<GameState>((set, get) => ({
@@ -83,13 +66,9 @@ export const useGame = create<GameState>((set, get) => ({
   opponentDisconnectedGraceMs: null,
   emoji: null,
 
-  equippedSlots: [null, null, null],
-  inventory: { bomb: 0, mine: 0, beanstalk: 0 },
   mines: [],
   bombActiveUntilMs: null,
   beanstalkJumpAt: null,
-  shieldArmedUntilMs: 0,
-  shieldConsumed: false,
   pendingTickEvent: null,
 
   init({ matchId, goalFloor, stairs, botDifficulty }) {
@@ -99,13 +78,9 @@ export const useGame = create<GameState>((set, get) => ({
       combo: createComboState(),
       coinsCollected: 0, failCount: 0, inputLockedUntil: 0,
       endedReason: null, matchStartAtMs: null, opponentDisconnectedGraceMs: null,
-      equippedSlots: [null, null, null],
-      inventory: { bomb: 0, mine: 0, beanstalk: 0 },
       mines: [],
       bombActiveUntilMs: null,
       beanstalkJumpAt: null,
-      shieldArmedUntilMs: 0,
-      shieldConsumed: false,
       pendingTickEvent: null,
     });
   },
@@ -140,28 +115,12 @@ export const useGame = create<GameState>((set, get) => ({
         pendingTickEvent = 'mine_hit';
       }
 
-      let shieldArmedUntilMs = s.shieldArmedUntilMs;
-      let shieldConsumed = s.shieldConsumed;
-      if (combo.combo >= 20 && s.combo.combo < 20) {
-        shieldArmedUntilMs = atMs + SHIELD_WINDOW_MS;
-        shieldConsumed = false;
-      }
-      if (combo.combo === 0) {
-        shieldArmedUntilMs = 0;
-        shieldConsumed = false;
-      }
-
       const maxFloorReached = Math.max(s.maxFloorReached, playerFloor);
       const lastCrossedStair = Math.max(s.lastCrossedStair, s.playerFloor);
-      set({ playerFloor, maxFloorReached, lastCrossedStair, combo, coinsCollected, inputLockedUntil, mines, shieldArmedUntilMs, shieldConsumed, pendingTickEvent });
+      set({ playerFloor, maxFloorReached, lastCrossedStair, combo, coinsCollected, inputLockedUntil, mines, pendingTickEvent });
       if (playerFloor >= s.goalFloor) get().end('reached_goal');
     } else {
-      // M3 shield: time-windowed, separate from combo.shieldAvailable
-      if (s.combo.combo >= 20 && atMs <= s.shieldArmedUntilMs && !s.shieldConsumed) {
-        set({ shieldConsumed: true, pendingTickEvent: 'shield_used' });
-        return;
-      }
-      // Force a real fail: bypass combo.shieldAvailable since M3 owns shield semantics.
+      // Force a real fail: bypass combo.shieldAvailable.
       const combo: ComboState = {
         combo: 0,
         maxCombo: s.combo.maxCombo,
@@ -175,8 +134,6 @@ export const useGame = create<GameState>((set, get) => ({
         playerFloor, combo,
         failCount: s.failCount + 1,
         inputLockedUntil: atMs + 400,
-        shieldArmedUntilMs: 0,
-        shieldConsumed: false,
       });
     }
   },
@@ -185,12 +142,7 @@ export const useGame = create<GameState>((set, get) => ({
     const s = get();
     const combo = onTimeoutCheck(s.combo, atMs);
     if (combo !== s.combo) {
-      const patch: Partial<GameState> = { combo };
-      if (combo.combo === 0) {
-        patch.shieldArmedUntilMs = 0;
-        patch.shieldConsumed = false;
-      }
-      set(patch);
+      set({ combo });
     }
   },
 
@@ -212,57 +164,7 @@ export const useGame = create<GameState>((set, get) => ({
   },
   end(reason) { set({ endedReason: reason }); },
 
-  // M3 actions
-
-  setEquippedSlots(slots) {
-    const padded = slots.concat([null, null, null]).slice(0, 3);
-    set({ equippedSlots: padded });
-  },
-
-  setInventory(inv) {
-    set({ inventory: { bomb: 0, mine: 0, beanstalk: 0, ...inv } });
-  },
-
-  async useSlot(index) {
-    const s = get();
-    const itemId = s.equippedSlots[index];
-    if (!itemId || !s.matchId) return;
-
-    const optimistic = s.equippedSlots.slice();
-    optimistic[index] = null;
-    set({ equippedSlots: optimistic });
-
-    let res: { ok?: boolean; result?: UseResult; error?: string } | null = null;
-    try {
-      const r = await apiFetch(`/api/matches/${s.matchId}/items/use`, {
-        method: 'POST',
-        body: JSON.stringify({ itemId }),
-      });
-      res = await r.json();
-    } catch {
-      res = null;
-    }
-
-    if (!res?.ok || !res.result) {
-      const rollback = get().equippedSlots.slice();
-      rollback[index] = itemId;
-      set({ equippedSlots: rollback });
-      return;
-    }
-
-    const result = res.result;
-    if (result.kind === 'beanstalk') {
-      const atMs = performance.now();
-      get().applyBeanstalkJump(result.fromFloor, result.toFloor, atMs);
-      set({
-        playerFloor: result.toFloor,
-        maxFloorReached: Math.max(get().maxFloorReached, result.toFloor),
-        pendingTickEvent: 'beanstalk_use',
-      });
-    }
-    // mine/bomb visual side-effects come back via Pusher (mine_placed/bomb_triggered)
-    // and are applied by the adapter binding.
-  },
+  // M3 receive-side actions
 
   applyMine(floor) {
     set({ mines: [...get().mines, floor] });
@@ -274,22 +176,6 @@ export const useGame = create<GameState>((set, get) => ({
 
   applyBeanstalkJump(from, to, atMs) {
     set({ beanstalkJumpAt: { fromFloor: from, toFloor: to, atMs } });
-  },
-
-  applyItemPicked(itemId, slotIndex) {
-    const slots = get().equippedSlots.slice();
-    if (slotIndex >= 0 && slotIndex < 3 && slots[slotIndex] === null) {
-      slots[slotIndex] = itemId;
-      set({ equippedSlots: slots });
-    }
-  },
-
-  armShield(atMs) {
-    set({ shieldArmedUntilMs: atMs + SHIELD_WINDOW_MS, shieldConsumed: false });
-  },
-
-  consumeShield() {
-    set({ shieldConsumed: true });
   },
 
   consumePendingTickEvent() {

@@ -3,8 +3,7 @@ export type TickEvent =
   | 'booster'
   | 'item'
   | 'beanstalk_use'
-  | 'mine_hit'
-  | 'shield_used';
+  | 'mine_hit';
 
 export interface OpponentState { floor: number; combo?: number; lastEvent?: TickEvent; }
 export interface MatchEnded { reason: 'normal' | 'opponent_disconnect' | 'invalidated'; winnerUserId?: string; coins?: Record<string, number>; }

@@ -18,7 +18,7 @@ import { createNetworkAdapter } from '@/game/sync/network-adapter';
 import { renderStair } from '@/game/renderers/stair';
 import { createPlayer } from '@/game/renderers/player';
 import { lerpCameraToFloor } from '@/game/camera';
-import { flashCombo, showFailPopup, showBeanstalkJump, showShieldFlash } from '@/game/renderers/effects';
+import { flashCombo, showFailPopup, showBeanstalkJump } from '@/game/renderers/effects';
 import { apiFetch } from '@/lib/match-network';
 import { audio } from '@/lib/audio';
 import type { Application, Container as PixiContainer } from 'pixi.js';
@@ -77,26 +77,14 @@ export default function GamePage() {
     const mode = Number(url.searchParams.get('mode') ?? '100');
     const seedParam = url.searchParams.get('seed');
     const diff = (url.searchParams.get('diff') ?? 'normal') as 'easy'|'normal'|'hard';
-    const slotsRaw = url.searchParams.get('slots');
-
-    const seedSlotsFromUrl = () => {
-      if (!slotsRaw) return;
-      try {
-        const parsed = JSON.parse(slotsRaw) as (string | null)[];
-        useGame.getState().setEquippedSlots(parsed);
-      } catch {}
-    };
 
     if (type === 'bot') {
       const seed = seedParam ?? params.matchId;
       const stairList = generateStairs(seed, mode);
       init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: diff });
-      seedSlotsFromUrl();
       setMeta({ type, mode, seed, diff });
       setMatchStartAt(performance.now());
     } else {
-      // For ranked, init runs inside onCountdown after match_start arrives — re-seed slots there.
-      seedSlotsFromUrl();
       setMeta({ type, mode, seed: null, diff });
     }
   }, [params.matchId, init, setMatchStartAt]);
@@ -131,13 +119,10 @@ export default function GamePage() {
   }, []);
 
   useEffect(() => {
-    // Pixi-side visual feedback for beanstalk jumps and shield consumption.
+    // Pixi-side visual feedback for beanstalk jumps.
     const unsub = useGame.subscribe((s, p) => {
       if (s.beanstalkJumpAt && s.beanstalkJumpAt !== p.beanstalkJumpAt) {
         if (stageRef.current) showBeanstalkJump(stageRef.current, s.beanstalkJumpAt.fromFloor, s.beanstalkJumpAt.toFloor);
-      }
-      if (s.shieldConsumed && !p.shieldConsumed) {
-        if (stageRef.current) showShieldFlash(stageRef.current);
       }
     });
     return unsub;
@@ -168,21 +153,10 @@ export default function GamePage() {
           const localStart = performance.now() + (startAtMs - Date.now());
           const stairList = generateStairs(seed, mode);
           init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: 'normal' });
-          try {
-            const slotsRaw = new URL(window.location.href).searchParams.get('slots');
-            if (slotsRaw) {
-              const parsed = JSON.parse(slotsRaw) as (string | null)[];
-              useGame.getState().setEquippedSlots(parsed);
-            }
-          } catch {}
           setMatchStartAt(localStart);
         },
         onOpponentGrace: (remainingMs) => setOpponentDisconnectedGrace(remainingMs),
         onOpponentResumed: () => setOpponentResumed(),
-        onItemPicked: (userId, itemId, _floor, slotIndex) => {
-          if (myUserIdRef.current && userId !== myUserIdRef.current) return;
-          useGame.getState().applyItemPicked(itemId, slotIndex);
-        },
         onMinePlaced: (targetUserId, floor) => {
           if (myUserIdRef.current && targetUserId !== myUserIdRef.current) return;
           useGame.getState().applyMine(floor);
