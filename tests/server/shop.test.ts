@@ -9,7 +9,7 @@ function makeDb(users: any[]) {
     update: () => ({ set: (v: any) => ({ where: () => { Object.assign(store[0], v); return Promise.resolve(); } }) }),
     insert: () => ({ values: (v: any) => { transactions.push(v); return Promise.resolve(); } }),
   };
-  return { _users: store, transaction: (cb: any) => cb(tx) };
+  return { _users: store, _transactions: transactions, transaction: (cb: any) => cb(tx) };
 }
 
 describe('buyCosmetic', () => {
@@ -30,6 +30,8 @@ describe('buyCosmetic', () => {
     const result = await buyCosmetic(db as any, 'u1', 'red-strawberry');
     expect(result.coinsAfter).toBe(300);
     expect(db._users[0].characterId).toBe('red-strawberry');
+    expect(db._transactions).toHaveLength(1);
+    expect(db._transactions[0].deltaCoins).toBe(-200);
   });
   it('무료 코스메틱(pink-beanie) → 이미 기본값이라 already owned', async () => {
     const db = makeDb([{ id: 'u1', coins: 0, characterId: 'pink-beanie' }]);

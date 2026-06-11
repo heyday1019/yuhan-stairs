@@ -29,6 +29,9 @@ export async function POST(req: Request) {
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     const msg = (e as Error).message;
-    return NextResponse.json({ error: msg }, { status: 400 });
+    if (msg === 'insufficient coins' || msg === 'already owned' || msg === 'unknown characterId' || msg.startsWith('unknown boostId')) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    throw e;
   }
 }

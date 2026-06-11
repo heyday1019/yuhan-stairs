@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const activeBoosts = await getActiveBoosts(db as any, user.id);
     return NextResponse.json({
       coins: user.coins,
-      characterId: (user as any).characterId ?? 'pink-beanie',
+      characterId: user.characterId,
       activeBoosts,
       boosts: BOOSTS,
       cosmetics: COSMETICS,
