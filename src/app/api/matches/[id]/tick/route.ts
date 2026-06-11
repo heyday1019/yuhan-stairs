@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const { id: matchId } = await ctx.params;
     const user = await getCurrentUserFromHeaders(req.headers);
-    const tick = await req.json() as { seq: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail'|'booster'|'item'|'beanstalk_use'|'mine_hit'|'shield_used' };
+    const tick = await req.json() as { seq: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail'|'booster'|'item'|'beanstalk_use'|'mine_hit' };
 
     const r = getRedis();
     const pusher = getPusher();
@@ -82,18 +82,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ ok: false, reason: result.reason });
     }
 
-    // Shield arming: combo just crossed into ≥20 and not yet armed/consumed
-    const nextState: ValidatorState = { ...result.nextState };
-    if (tick.combo >= 20 && !nextState.shieldArmedUntilMs && !nextState.shieldConsumed) {
-      nextState.shieldArmedUntilMs = elapsed + 1500;
-    }
-    // Combo break — reset shield state
-    if (tick.combo === 0 && (nextState.shieldArmedUntilMs || nextState.shieldConsumed)) {
-      nextState.shieldArmedUntilMs = undefined;
-      nextState.shieldConsumed = false;
-    }
-
-    await r.set(stateKey, JSON.stringify(nextState), { ex: 90 });
+    await r.set(stateKey, JSON.stringify(result.nextState), { ex: 90 });
 
     const participants = await db.select().from(schema.matchParticipants).where(eq(schema.matchParticipants.matchId, matchId));
     const opponent = participants.find((p) => p.userId !== user.id);

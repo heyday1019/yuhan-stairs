@@ -123,48 +123,10 @@ describe('validateTick — M3 extensions', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('shield_used: combo≥20 + arm window 내 → ok, shieldConsumed=true', () => {
-    const s = baseState({ lastSeq: 1, lastFloor: 10, shieldArmedUntilMs: 5000 });
-    const r = validateTick(
-      { seq: 2, floor: 10, lastEvent: 'shield_used', combo: 25 },
-      s,
-      stairs,
-      4500,
-    );
-    expect(r.ok).toBe(true);
-    expect(r.nextState.shieldConsumed).toBe(true);
-  });
-
-  it('shield_used: combo<20 → shield_not_armed, flag 증가', () => {
-    const s = baseState({ lastSeq: 1, lastFloor: 10, shieldArmedUntilMs: 5000, flaggedCount: 0 });
-    const r = validateTick(
-      { seq: 2, floor: 10, lastEvent: 'shield_used', combo: 19 },
-      s,
-      stairs,
-      4500,
-    );
-    expect(r.ok).toBe(false);
-    expect(r.reason).toBe('shield_not_armed');
-    expect(r.nextState.flaggedCount).toBe(1);
-  });
-
-  it('shield_used: shieldArmedUntilMs 없음/지남 → shield_not_armed', () => {
-    const s = baseState({ lastSeq: 1, lastFloor: 10, flaggedCount: 0 });
-    const r = validateTick(
-      { seq: 2, floor: 10, lastEvent: 'shield_used', combo: 30 },
-      s,
-      stairs,
-      4500,
-    );
-    expect(r.ok).toBe(false);
-    expect(r.reason).toBe('shield_not_armed');
-    expect(r.nextState.flaggedCount).toBe(1);
-  });
-
-  it('ok 경로에서 shield/lock 필드는 명시적 변경이 없으면 보존', () => {
-    const s = baseState({ lastSeq: 1, lastFloor: 10, shieldArmedUntilMs: 9999, lastInputLockUntilMs: 0 });
+  it('ok 경로에서 lock 필드는 명시적 변경이 없으면 보존', () => {
+    const s = baseState({ lastSeq: 1, lastFloor: 10, lastInputLockUntilMs: 0 });
     const r = validateTick({ seq: 2, floor: 11 }, s, stairs, 2000);
     expect(r.ok).toBe(true);
-    expect(r.nextState.shieldArmedUntilMs).toBe(9999);
+    expect(r.nextState.lastInputLockUntilMs).toBe(0);
   });
 });

@@ -6,14 +6,12 @@ export interface ValidatorState {
   lastFloor: number;
   flaggedCount: number;
   lastInputLockUntilMs?: number;
-  shieldArmedUntilMs?: number;
-  shieldConsumed?: boolean;
 }
 
 export interface TickInput {
   seq: number;
   floor: number;
-  lastEvent?: 'fail' | 'booster' | 'item' | 'beanstalk_use' | 'mine_hit' | 'shield_used';
+  lastEvent?: 'fail' | 'booster' | 'item' | 'beanstalk_use' | 'mine_hit';
   combo?: number;
 }
 
@@ -23,8 +21,7 @@ export type TickReason =
   | 'floor_regress_too_large'
   | 'rate_limit'
   | 'booster_seed_mismatch'
-  | 'input_locked'
-  | 'shield_not_armed';
+  | 'input_locked';
 
 export interface TickResult {
   ok: boolean;
@@ -38,7 +35,6 @@ const MAX_FLOOR_JUMP = 8;
 const MAX_FLOOR_REGRESS = 3;
 const FLAG_THRESHOLD = 3;
 const MINE_INPUT_LOCK_MS = 1000;
-const SHIELD_COMBO_THRESHOLD = 20;
 
 export function validateTick(
   tick: TickInput,
@@ -84,21 +80,6 @@ export function validateTick(
       };
     }
   }
-  if (tick.lastEvent === 'shield_used') {
-    const armedUntil = state.shieldArmedUntilMs ?? 0;
-    const comboOk = (tick.combo ?? 0) >= SHIELD_COMBO_THRESHOLD;
-    const windowOk = serverNowMsSinceStart <= armedUntil;
-    if (!comboOk || !windowOk) {
-      const flaggedCount = state.flaggedCount + 1;
-      return {
-        ok: false,
-        reason: 'shield_not_armed',
-        nextState: { ...state, lastSeq: tick.seq, flaggedCount },
-        invalidated: flaggedCount >= FLAG_THRESHOLD,
-      };
-    }
-  }
-
   const nextState: ValidatorState = {
     ...state,
     lastSeq: tick.seq,
@@ -106,9 +87,6 @@ export function validateTick(
   };
   if (tick.lastEvent === 'mine_hit') {
     nextState.lastInputLockUntilMs = serverNowMsSinceStart + MINE_INPUT_LOCK_MS;
-  }
-  if (tick.lastEvent === 'shield_used') {
-    nextState.shieldConsumed = true;
   }
   return { ok: true, nextState };
 }
