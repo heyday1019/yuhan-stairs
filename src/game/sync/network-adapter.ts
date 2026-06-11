@@ -13,8 +13,8 @@ export function createNetworkAdapter(matchId: string): OpponentSyncAdapter {
   return {
     start(opts) {
       channel = subscribePresenceMatch(matchId);
-      channel.bind('match_start', (data: { startAtMs: number; seed: string; mode: number }) => {
-        opts.onCountdown?.(data.startAtMs, data.seed, data.mode);
+      channel.bind('match_start', (data: { startAtMs: number; seed: string; mode: number; opponentCharId?: string }) => {
+        opts.onCountdown?.(data.startAtMs, data.seed, data.mode, data.opponentCharId ?? 'crystal-tophat');
       });
       channel.bind('opponent_tick', (data: OpponentState & { userId: string }) => {
         opts.onOpponentTick({ floor: data.floor, combo: data.combo, lastEvent: data.lastEvent });
@@ -24,9 +24,6 @@ export function createNetworkAdapter(matchId: string): OpponentSyncAdapter {
       });
       channel.bind('opponent_resumed', () => { opts.onOpponentResumed?.(); });
       channel.bind('match_ended', (data: MatchEnded) => { opts.onMatchEnded(data); });
-      channel.bind('item_picked', (data: { userId: string; itemId: string; floor: number; slotIndex: number }) => {
-        opts.onItemPicked?.(data.userId, data.itemId, data.floor, data.slotIndex);
-      });
       channel.bind('mine_placed', (data: { targetUserId: string; floor: number }) => {
         opts.onMinePlaced?.(data.targetUserId, data.floor);
       });
@@ -35,6 +32,9 @@ export function createNetworkAdapter(matchId: string): OpponentSyncAdapter {
       });
       channel.bind('beanstalk_used', (data: { userId: string; fromFloor: number; toFloor: number }) => {
         opts.onBeanstalkUsed?.(data.userId, data.fromFloor, data.toFloor);
+      });
+      channel.bind('lightning_triggered', (data: { targetUserId: string; durationMs: number }) => {
+        opts.onLightningTriggered?.(data.targetUserId, data.durationMs);
       });
       channel.bind('emoji_sent', (data: { userId: string; emoji: string }) => {
         opts.onEmojiReceived?.(data.emoji);
