@@ -7,7 +7,10 @@ import { InputOverlay } from '@/components/InputOverlay';
 import { ControlPad } from '@/components/ControlPad';
 import { CountdownOverlay } from '@/components/CountdownOverlay';
 import { WaitingOpponent } from '@/components/WaitingOpponent';
-import { ItemBar } from '@/components/ItemBar';
+import { RouletteOverlay } from '@/components/RouletteOverlay';
+import { hasBoxAtFloor, pickRandomItem } from '@/game/box-spawn';
+import type { BoostId } from '@/shared/shop-catalog';
+import { LIGHTNING_DURATION_MS } from '@/shared/constants';
 import { BombOverlay } from '@/components/BombOverlay';
 import { ParallaxLayers } from '@/components/ParallaxLayers';
 import { FeverOverlay } from '@/components/FeverOverlay';
@@ -48,8 +51,12 @@ export default function GamePage() {
   const [meta, setMeta] = useState<{ type: 'bot'|'ranked'; mode: number; seed: string|null; diff: 'easy'|'normal'|'hard' } | null>(null);
   const [floatingEmoji, setFloatingEmoji] = useState<{ emoji: string; key: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [rouletteItem, setRouletteItem] = useState<string | null>(null);
+  const [activeBoosts, setActiveBoosts] = useState<BoostId[]>([]);
+  const [opponentCharId, setOpponentCharId] = useState(OPPONENT_FALLBACK_ID);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevGapRef = useRef(0);
+  const lastBoxFloorRef = useRef(-1);
 
   const myFloor = useGame((s) => s.playerFloor);
   const opponentFloor = useGame((s) => s.opponentFloor);
@@ -60,6 +67,30 @@ export default function GamePage() {
     toastTimerRef.current = setTimeout(() => setToast(null), ms);
   }, []);
 
+  const handleRouletteDone = useCallback(async () => {
+    const item = rouletteItem;
+    setRouletteItem(null);
+    if (!item || !meta) return;
+
+    if (item === 'beanstalk') {
+      const s = useGame.getState();
+      const from = s.playerFloor;
+      const to = Math.min(from + 5, s.goalFloor);
+      useGame.getState().applyBeanstalkJump(from, to, performance.now());
+      useGame.setState({
+        playerFloor: to,
+        maxFloorReached: Math.max(s.maxFloorReached, to),
+        pendingTickEvent: 'beanstalk_use',
+      });
+      if (to >= s.goalFloor) useGame.getState().end('reached_goal');
+    } else if (meta.type === 'ranked') {
+      await apiFetch(`/api/matches/${params.matchId}/box/activate`, {
+        method: 'POST',
+        body: JSON.stringify({ itemId: item }),
+      }).catch(() => null);
+    }
+  }, [rouletteItem, meta, params.matchId]);
+
   useEffect(() => {
     return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); };
   }, []);
@@ -67,7 +98,10 @@ export default function GamePage() {
   useEffect(() => {
     apiFetch('/api/users/me')
       .then((r) => r.json())
-      .then((j: { id?: string }) => { myUserIdRef.current = j?.id ?? null; })
+      .then((j: { id?: string; activeBoosts?: BoostId[] }) => {
+        myUserIdRef.current = j?.id ?? null;
+        if (j?.activeBoosts) setActiveBoosts(j.activeBoosts);
+      })
       .catch(() => {});
   }, []);
 
@@ -83,6 +117,9 @@ export default function GamePage() {
       const stairList = generateStairs(seed, mode);
       init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: diff });
       setMeta({ type, mode, seed, diff });
+      // Read opponent character from URL param (set by mode-select or bot pairing)
+      const oppChar = url.searchParams.get('oppchar') ?? OPPONENT_FALLBACK_ID;
+      setOpponentCharId(oppChar);
       setMatchStartAt(performance.now());
     } else {
       setMeta({ type, mode, seed: null, diff });
@@ -129,6 +166,21 @@ export default function GamePage() {
   }, []);
 
   useEffect(() => {
+    const unsub = useGame.subscribe((next, prev) => {
+      if (rouletteItem) return; // roulette already shown
+      if (next.playerFloor > prev.playerFloor) {
+        const oppFloor = next.opponentFloor;
+        if (hasBoxAtFloor(next.playerFloor, oppFloor, lastBoxFloorRef.current)) {
+          lastBoxFloorRef.current = next.playerFloor;
+          const item = pickRandomItem(activeBoosts);
+          setRouletteItem(item);
+        }
+      }
+    });
+    return unsub;
+  }, [rouletteItem, activeBoosts]);
+
+  useEffect(() => {
     if (!meta) return;
     let cleanup: (() => void) | undefined;
     if (meta.type === 'bot' && stairs.length > 0) {
@@ -145,11 +197,12 @@ export default function GamePage() {
       adapter.start({
         onOpponentTick: ({ floor }) => setOpponentFloor(floor),
         onMatchEnded: (e) => applyMatchEnded(e),
-        onCountdown: (startAtMs, seed, mode) => {
+        onCountdown: (startAtMs, seed, mode, oppCharId) => {
           // Webhook re-broadcasts match_start on every member_added so late
           // subscribers can recover, which means an already-initialized client
           // can receive a duplicate. Skip to avoid wiping progress.
           if (useGame.getState().matchStartAtMs !== null) return;
+          setOpponentCharId(oppCharId);
           const localStart = performance.now() + (startAtMs - Date.now());
           const stairList = generateStairs(seed, mode);
           init({ matchId: params.matchId, goalFloor: mode, stairs: stairList, botDifficulty: 'normal' });
@@ -175,6 +228,10 @@ export default function GamePage() {
         onEmojiReceived: (emoji: string) => {
           setFloatingEmoji({ emoji, key: Date.now() });
           setTimeout(() => setFloatingEmoji(null), 2000);
+        },
+        onLightningTriggered: (_targetUserId, durationMs) => {
+          if (myUserIdRef.current && _targetUserId !== myUserIdRef.current) return;
+          useGame.setState({ inputLockedUntil: performance.now() + durationMs });
         },
       });
       adapterRef.current = adapter;
@@ -235,8 +292,8 @@ export default function GamePage() {
     const player = createPlayer(myTex.idle, myTex.jump);
     world.addChild(player.container);
 
-    // Opponent: Phase 1 uses a fixed sprite — the real opponent character is wired in Phase 2.
-    const oppTex = textures.characters.get(OPPONENT_FALLBACK_ID) ?? fallback;
+    // Opponent: use the character ID received from the match or URL param.
+    const oppTex = textures.characters.get(opponentCharId) ?? fallback;
     const opponent = createPlayer(oppTex.idle, oppTex.jump);
     opponent.container.alpha = 0.85;
     world.addChild(opponent.container);
@@ -268,7 +325,7 @@ export default function GamePage() {
           if (!stair) continue;
           world.removeChild(node);
           node.destroy({ children: true });
-          stairContainers.set(f, renderStair(world, stair, textures.stair, { isMine: mineSet.has(f) }));
+          stairContainers.set(f, renderStair(world, stair, textures.stair, { isMine: mineSet.has(f), isBox: hasBoxAtFloor(f, oppFloor, lastBoxFloorRef.current) }));
         }
         lastMinesKey = mineKey;
       }
@@ -278,7 +335,9 @@ export default function GamePage() {
       const hi = Math.min(curStairs.length, anchorFloor + 15);
       for (let f = lo; f <= hi; f++) {
         if (!stairContainers.has(f)) {
-          stairContainers.set(f, renderStair(world, curStairs[f - 1], textures.stair, { isMine: mineSet.has(f) }));
+          const stair = curStairs[f - 1];
+          const isBox = hasBoxAtFloor(f, oppFloor, lastBoxFloorRef.current);
+          stairContainers.set(f, renderStair(world, stair, textures.stair, { isMine: mineSet.has(f), isBox }));
         }
       }
       lerpCameraToFloor(world, anchorFloor, combo.combo);
@@ -301,7 +360,7 @@ export default function GamePage() {
       if (combo.combo > lastCombo && combo.combo % 5 === 0) { flashCombo(app.stage, combo.combo); }
       lastCombo = combo.combo;
     });
-  }, []);
+  }, [opponentCharId]);
 
   return (
     <main
@@ -313,9 +372,11 @@ export default function GamePage() {
       <PixiCanvas width={360} height={780} onReady={onPixiReady} />
       <InputOverlay />
       <ControlPad />
-      <ItemBar />
       <BombOverlay />
       <FeverOverlay />
+      {rouletteItem && (
+        <RouletteOverlay result={rouletteItem} onDone={handleRouletteDone} />
+      )}
       {matchStartAtMs !== null && performance.now() < matchStartAtMs && (
         <CountdownOverlay startAtMs={matchStartAtMs} onDone={() => { /* state machine handles unlock via matchStartAtMs */ }} />
       )}
