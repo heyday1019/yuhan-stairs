@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
 
     const pusher = getPusher();
     await Promise.all([
-      pusher.trigger(`private-user-${user.id}`, 'match_ready', { matchId: match.id, opponentNickname: opponent.nickname, role: 'B' }),
-      pusher.trigger(`private-user-${result.opponentUserId}`, 'match_ready', { matchId: match.id, opponentNickname: user.nickname, role: 'A' }),
+      pusher.trigger(`private-user-${user.id}`, 'match_ready', { matchId: match.id, opponentNickname: opponent.nickname, opponentCharId: opponent.characterId ?? 'pink-beanie', role: 'B' }),
+      pusher.trigger(`private-user-${result.opponentUserId}`, 'match_ready', { matchId: match.id, opponentNickname: user.nickname, opponentCharId: user.characterId ?? 'pink-beanie', role: 'A' }),
     ]);
 
     return NextResponse.json({ status: 'paired', matchId: match.id });
