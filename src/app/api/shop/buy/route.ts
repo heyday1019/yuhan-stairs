@@ -1,27 +1,34 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUserFromHeaders, AuthError } from '@/server/auth';
 import { db } from '@/server/db';
-import { buyItem, getInventoryFor } from '@/server/shop';
+import { buyBoost } from '@/server/boosts';
+import { buyCosmetic } from '@/server/shop';
+import type { BoostId } from '@/shared/shop-catalog';
 
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUserFromHeaders(req.headers);
+    const body = await req.json().catch(() => ({}));
+    const { type, id } = body as { type?: string; id?: string };
 
-    let body: { itemId?: string; qty?: number };
-    try { body = await req.json(); } catch { return NextResponse.json({ error: 'bad body' }, { status: 400 }); }
-    if (typeof body.itemId !== 'string' || typeof body.qty !== 'number') {
-      return NextResponse.json({ error: 'missing fields' }, { status: 400 });
+    if (!type || !id) {
+      return NextResponse.json({ error: 'type and id required' }, { status: 400 });
     }
 
-    try {
-      const { coinsAfter } = await buyItem(db, user.id, body.itemId, body.qty);
-      const inventory = await getInventoryFor(db, user.id);
-      return NextResponse.json({ ok: true, coins: coinsAfter, inventory });
-    } catch (e) {
-      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    if (type === 'boost') {
+      const result = await buyBoost(db as any, user.id, id as BoostId);
+      return NextResponse.json({ ok: true, coinsAfter: result.coinsAfter });
     }
+
+    if (type === 'cosmetic') {
+      const result = await buyCosmetic(db as any, user.id, id);
+      return NextResponse.json({ ok: true, coinsAfter: result.coinsAfter });
+    }
+
+    return NextResponse.json({ error: 'invalid type' }, { status: 400 });
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
-    throw e;
+    const msg = (e as Error).message;
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
