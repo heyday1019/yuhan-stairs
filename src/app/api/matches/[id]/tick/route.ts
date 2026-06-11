@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const { id: matchId } = await ctx.params;
     const user = await getCurrentUserFromHeaders(req.headers);
-    const tick = await req.json() as { seq: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail'|'booster'|'item'|'beanstalk_use'|'mine_hit' };
+    const tick = await req.json() as { seq: number; floor: number; combo: number; coins: number; failCount: number; lastEvent?: 'fail' | 'booster' | 'beanstalk_use' | 'mine_hit' };
 
     const r = getRedis();
     const pusher = getPusher();
@@ -53,17 +53,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const wasFirst = await r.set(dedupKey, '1', { ex: 60, nx: true });
       if (wasFirst !== 'OK') {
         effectiveTick = { ...effectiveTick, lastEvent: undefined };
-      }
-    }
-
-    // beanstalk_use must be backed by an active pending window (set by items/use)
-    if (effectiveTick.lastEvent === 'beanstalk_use') {
-      const pendingKey = `match:beanstalk_pending:${matchId}:${user.id}`;
-      const pending = await r.get(pendingKey);
-      if (!pending) {
-        effectiveTick = { ...effectiveTick, lastEvent: undefined };
-      } else {
-        await r.del(pendingKey);
       }
     }
 
