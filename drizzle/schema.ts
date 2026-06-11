@@ -61,11 +61,11 @@ export const inventoryItems = pgTable('inventory_items', {
 }));
 
 export const userBoosts = pgTable('user_boosts', {
-  id:             uuid('id').primaryKey().defaultRandom(),
-  userId:         uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  boostType:      text('boost_type').notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  boostType: text('boost_type').notNull(),
   gamesRemaining: integer('games_remaining').notNull(),
-  createdAt:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-  userIdx: index('user_boosts_user_id_idx').on(t.userId),
+  boostUserIdx: index('user_boosts_user_id_idx').on(t.userId),
 }));
