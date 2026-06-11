@@ -1,0 +1,51 @@
+<h2>M4 — 어떤 기능을 담을까요?</h2>
+<p class="subtitle">백로그에서 M4에 포함할 항목을 골라주세요 (복수 선택 가능)</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="mario-kart" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>🎲 마리오 카트 아이템 박스</h3>
+      <p>현재 3슬롯 구매·장착 모델을 갈아엎음. 게임 중 픽업 → 룰렛 회전 → 탭 시 랜덤 아이템 발동. 상점/슬롯 UI 제거.</p>
+      <div class="label" style="color:#f59e0b;margin-top:6px">범위: 大 (시스템 전면 교체)</div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="emoji-overtake" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>😆 이모티콘 + 추월 알림</h3>
+      <p>게임 중 이모티콘 5종 빠른 탭 → 상대 화면에 표시. 내가 상대를 추월하거나 따라잡히면 "추월!" 토스트.</p>
+      <div class="label" style="color:#10b981;margin-top:6px">범위: 小 (Pusher 이벤트 2개 + UI)</div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="real-character" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>🧑‍🚀 상대방 실제 캐릭터 표시</h3>
+      <p>현재 상대는 항상 crystal-tophat 고정. DB users.character_id 컬럼 추가 또는 Redis match payload 확장으로 실제 선택 캐릭터 표시.</p>
+      <div class="label" style="color:#10b981;margin-top:6px">범위: 小~中</div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="leaderboard" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>🏆 리더보드 / 랭킹</h3>
+      <p>전체 유저 점수·승률 순위. /leaderboard 라우트. M1 spec 비목표였으나 유저 풀 커지면 동기부여 상승.</p>
+      <div class="label" style="color:#6366f1;margin-top:6px">범위: 中 (DB 집계 + 새 라우트)</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px;padding:16px;background:rgba(255,255,255,0.04);border-radius:8px">
+  <p class="label">참고 — M3에서 이미 백로그 지정된 것</p>
+  <ul style="margin-top:8px;font-size:13px;opacity:0.7;line-height:1.8">
+    <li>BGM 5개 트랙 — 사용자 직접 다운로드, 코드 없음</li>
+    <li>ParallaxLayers 콤보 가속 — 시각 폴리시, 별도 마일스톤 or M4 포함 가능</li>
+    <li>Vercel Pusher env 재등록 — 인프라 작업, 사용자 대시보드</li>
+  </ul>
+</div>

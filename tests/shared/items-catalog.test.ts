@@ -2,9 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { ITEMS_CATALOG, getItemMeta } from '@/shared/items-catalog';
 
 describe('items-catalog', () => {
-  it('returns three items', () => {
-    expect(ITEMS_CATALOG).toHaveLength(3);
-    expect(ITEMS_CATALOG.map((i) => i.id).sort()).toEqual(['beanstalk', 'bomb', 'mine']);
+  it('contains the expected item ids', () => {
+    expect(ITEMS_CATALOG.map((i) => i.id).sort()).toEqual(['beanstalk', 'bomb', 'lightning', 'mine']);
   });
 
   it('exposes prices matching spec', () => {

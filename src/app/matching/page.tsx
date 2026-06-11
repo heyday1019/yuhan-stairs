@@ -10,24 +10,8 @@ function MatchingInner() {
   const router = useRouter();
   const params = useSearchParams();
   const mode = Number(params.get('mode') ?? '100');
-  const slotsParam = params.get('slots') ?? '[null,null,null]';
   const [secondsLeft, setSecondsLeft] = useState(FALLBACK_MS / 1000);
   const goneRef = useRef(false);
-
-  const equipBeforeJoin = async (matchId: string) => {
-    let itemIds: string[] = [];
-    try {
-      const parsed = JSON.parse(slotsParam) as (string | null)[];
-      itemIds = parsed.filter((s): s is string => typeof s === 'string');
-    } catch {}
-    if (itemIds.length === 0) return;
-    await apiFetch(`/api/matches/${matchId}/items/equip`, {
-      method: 'POST',
-      body: JSON.stringify({ itemIds }),
-    }).catch(() => null);
-  };
-
-  const enc = encodeURIComponent(slotsParam);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,12 +43,11 @@ function MatchingInner() {
       // Subscribe FIRST and wait for the channel to be live so we never miss
       // a match_ready event triggered between enqueue and subscription.
       const channel = subscribePrivateUser(me.id);
-      channel.bind('match_ready', (data: { matchId: string }) => {
+      channel.bind('match_ready', (data: { matchId: string; opponentNickname?: string; opponentCharId?: string }) => {
         if (goneRef.current) return;
         goneRef.current = true;
-        equipBeforeJoin(data.matchId).finally(() => {
-          router.push(`/game/${data.matchId}?mode=${mode}&type=ranked&slots=${enc}`);
-        });
+        const oppChar = data.opponentCharId ?? 'crystal-tophat';
+        router.push(`/game/${data.matchId}?mode=${mode}&type=ranked&oppchar=${encodeURIComponent(oppChar)}`);
       });
       channelCleanup = () => { channel.unbind_all(); channel.unsubscribe(); };
       await new Promise<void>((resolve) => {
@@ -83,8 +66,7 @@ function MatchingInner() {
       if (enqueue.status === 'paired' || enqueue.status === 'already_in_match') {
         if (!goneRef.current) {
           goneRef.current = true;
-          await equipBeforeJoin(enqueue.matchId);
-          router.push(`/game/${enqueue.matchId}?mode=${mode}&type=ranked&slots=${enc}`);
+          router.push(`/game/${enqueue.matchId}?mode=${mode}&type=ranked`);
         }
       }
     })();
@@ -102,7 +84,7 @@ function MatchingInner() {
     await apiFetch('/api/matchmaking/cancel', { method: 'POST' });
     const res = await apiFetch('/api/matches/bot', { method: 'POST', body: JSON.stringify({ mode }) });
     const { matchId, seed, botDifficulty } = await res.json();
-    router.push(`/game/${matchId}?seed=${seed}&mode=${mode}&diff=${botDifficulty}&type=bot&slots=${enc}`);
+    router.push(`/game/${matchId}?seed=${seed}&mode=${mode}&diff=${botDifficulty}&type=bot`);
   };
 
   return (

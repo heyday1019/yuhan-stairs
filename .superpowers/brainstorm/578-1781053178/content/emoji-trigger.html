@@ -1,0 +1,101 @@
+<h2>이모티콘 — 어떻게 보내나요?</h2>
+<p class="subtitle">게임 화면에서 이모티콘을 어떻게 발동할지 골라주세요</p>
+
+<div class="cards">
+
+  <!-- Option A: 고정 버튼 -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:12px;font-size:11px;font-family:monospace;color:#94a3b8">
+      <div style="border:1px solid #334155;border-radius:8px;padding:8px;min-height:160px;position:relative;display:flex;flex-direction:column;justify-content:space-between">
+        <!-- top -->
+        <div style="display:flex;justify-content:space-between;color:#64748b;font-size:10px">
+          <span>👤 나 · 42층</span><span>🤖 봇 · 38층</span>
+        </div>
+        <!-- game area -->
+        <div style="text-align:center;padding:8px 0;color:#475569;font-size:10px">[ 게임 영역 ]</div>
+        <!-- emoji bar fixed left -->
+        <div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px">
+          <div style="background:#1e293b;border-radius:6px;padding:4px 6px;font-size:14px;border:1px solid #f59e0b">😂</div>
+          <div style="background:#1e293b;border-radius:6px;padding:4px 6px;font-size:14px">😤</div>
+          <div style="background:#1e293b;border-radius:6px;padding:4px 6px;font-size:14px">🔥</div>
+          <div style="background:#1e293b;border-radius:6px;padding:4px 6px;font-size:14px">👏</div>
+          <div style="background:#1e293b;border-radius:6px;padding:4px 6px;font-size:14px">😱</div>
+        </div>
+        <!-- control pad -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+          <div style="background:#1e293b;border-radius:8px;padding:6px 14px;color:#e2e8f0">◀</div>
+          <div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">💣</div>
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">💥</div>
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">🌱</div>
+          </div>
+          <div style="background:#1e293b;border-radius:8px;padding:6px 14px;color:#e2e8f0">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — 좌측 고정 버튼 5개</h3>
+      <p>항상 보임. 탭 한 번으로 발송. 화면 일부 가림.</p>
+    </div>
+  </div>
+
+  <!-- Option B: 버튼 눌러 패널 열기 -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:12px;font-size:11px;font-family:monospace;color:#94a3b8">
+      <div style="border:1px solid #334155;border-radius:8px;padding:8px;min-height:160px;position:relative;display:flex;flex-direction:column;justify-content:space-between">
+        <div style="display:flex;justify-content:space-between;color:#64748b;font-size:10px">
+          <span>👤 나 · 42층</span><span>🤖 봇 · 38층</span>
+        </div>
+        <div style="text-align:center;padding:8px 0;color:#475569;font-size:10px">[ 게임 영역 ]</div>
+        <!-- small emoji toggle button top-right -->
+        <div style="position:absolute;top:28px;right:8px;background:#f59e0b;border-radius:20px;padding:4px 8px;font-size:13px">😊</div>
+        <!-- expanded panel shown as overlay -->
+        <div style="position:absolute;top:50px;right:8px;background:#1e293b;border-radius:8px;padding:6px;display:flex;gap:4px;border:1px solid #f59e0b;font-size:14px">
+          <span>😂</span><span>😤</span><span>🔥</span><span>👏</span><span>😱</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+          <div style="background:#1e293b;border-radius:8px;padding:6px 14px;color:#e2e8f0">◀</div>
+          <div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">💣</div>
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">💥</div>
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">🌱</div>
+          </div>
+          <div style="background:#1e293b;border-radius:8px;padding:6px 14px;color:#e2e8f0">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — 우상단 버튼 탭 → 패널 펼침</h3>
+      <p>평소엔 작게 접혀있음. 탭 2번 (열기+선택). 화면 덜 가림.</p>
+    </div>
+  </div>
+
+  <!-- Option C: 쿨다운 버튼 1개 -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:12px;font-size:11px;font-family:monospace;color:#94a3b8">
+      <div style="border:1px solid #334155;border-radius:8px;padding:8px;min-height:160px;position:relative;display:flex;flex-direction:column;justify-content:space-between">
+        <div style="display:flex;justify-content:space-between;color:#64748b;font-size:10px">
+          <span>👤 나 · 42층</span><span>🤖 봇 · 38층</span>
+        </div>
+        <div style="text-align:center;padding:8px 0;color:#475569;font-size:10px">[ 게임 영역 ]</div>
+        <!-- single big emoji button center-left -->
+        <div style="position:absolute;left:8px;bottom:52px;background:#1e293b;border-radius:12px;padding:8px;font-size:20px;border:2px solid #6366f1">😂</div>
+        <div style="position:absolute;left:8px;bottom:38px;font-size:8px;color:#6366f1;text-align:center;width:38px">탭 = 랜덤</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+          <div style="background:#1e293b;border-radius:8px;padding:6px 14px;color:#e2e8f0">◀</div>
+          <div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">💣</div>
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">💥</div>
+            <div style="background:#334155;border-radius:4px;padding:2px 6px;font-size:9px">🌱</div>
+          </div>
+          <div style="background:#1e293b;border-radius:8px;padding:6px 14px;color:#e2e8f0">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — 버튼 1개, 탭 = 랜덤 발송</h3>
+      <p>탭 한 번으로 랜덤 이모티콘 발송. 가장 간단, 선택지 없음.</p>
+    </div>
+  </div>
+
+</div>
