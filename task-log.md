@@ -8,50 +8,82 @@
 
 ---
 
-## 다음 진행할 작업 (2026-06-10 세션 종료)
+## 다음 진행할 작업 (2026-06-13)
 
-**M4 코드 완료 + push 완료**. HEAD = `d0767c7`. prod 배포 중 → https://yuhan-stairs.vercel.app
+**M5 코드 + 룰렛 UI 개선 + 모드 활성화 완료**. HEAD = `2fe81e7`. prod 배포 완료 → https://yuhan-stairs.vercel.app
 
-### 0. 다음 세션 시작 시
-1. `task-log.md` 이 파일 읽기
-2. `git log --oneline -5` — 마지막 커밋 `d0767c7` 확인
-3. `git status` — clean 확인
-4. `pnpm test` — 120 passing 확인
+### 0. 세션 시작 체크
+- `git log --oneline -5`: HEAD = `2fe81e7` 확인
+- `git status`: clean 확인
 
-### 1. 모바일 QA — M4 신규 기능 (최우선)
+### 1. M4/M5 QA 계속 (미검증 항목)
+
+#### M5 QA (룰렛 · 상점)
+- [ ] 박스 밟으면 **상단 슬라이드 배너** 등장 (HUD 아래에서 내려오는 애니메이션)
+- [ ] 배너 내 이모지 4개가 가운데 정렬로 빠르게 전환 → 결과 아이템 확대 + "발동!"
+- [ ] 덩굴콩 +5층 / 폭탄·지뢰·번개 서버 발동
+- [ ] 200/300/500/800층 모드 버튼 클릭 및 게임 진입 확인
+
+#### M4 QA (미검증)
+- [ ] 홈 화면 리더보드 위젯
+- [ ] 이모티콘 버튼 (ranked)
+- [ ] 추월 토스트
+
+---
+
+## 다음 진행할 작업 (2026-06-12 세션 2)
+
+**M5 코드 완료 + push 완료**. HEAD = `0c065c8`. prod 배포 완료 → https://yuhan-stairs.vercel.app
+
+### 0. 세션 시작 체크 ✅ (2026-06-12 완료)
+- `git log --oneline -5`: HEAD = `0c065c8` ✅
+- `git status`: clean ✅
+- `pnpm test`: 115 passed ✅
+- `pnpm exec tsc --noEmit`: exit 0 ✅
+- `pnpm db:push`: "No changes detected" — M5 신규 테이블 이미 Neon에 적용됨 ✅
+
+### 1. 모바일 QA — M5 신규 기능 (최우선)
 
 배포 후 **하드 새로고침**. 통과/실패 보고하면 task-log 마크업.
 
-- [ ] 홈 화면 하단 **리더보드 위젯** — 닉네임 + 누적 점수 상위 3명 (데이터 없으면 "아직 데이터 없어요")
-- [ ] "전체 보기 →" → `/leaderboard` 진입
-- [ ] 주간 / 전체 탭 전환 — URL `?tab=weekly|all` 반영
-- [ ] 10위 밖 유저 → 하단 sticky에 내 순위 표시
-- [ ] 게임 화면 우상단 **😊 이모티콘 버튼** (ranked 매치, ended 전)
-- [ ] 탭 → 랜덤 이모티콘 floating 애니메이션 2초
-- [ ] 5초 내 재탭 → 버튼 비활성 + 카운트다운 ("5s"→"1s")
-- [ ] 격차 5층 벌어질 때 추월 토스트 1회 (좁혀졌다 다시 벌어지면 재발동)
+#### 박스 & 룰렛
+- [ ] 게임 중 `?` 박스가 계단에 나타남 (격차에 따라 빈도 변화)
+- [ ] 박스 밟으면 RouletteOverlay 등장 (~0.7초 애니메이션)
+- [ ] 룰렛 완료 즉시 아이템 발동
+- [ ] 덩굴콩: 즉시 +5층
 
-### 2. 모바일 QA — M3 미검증 항목
-
-- [ ] **#1 본인 코인 잔액** — 홈 좌상단 코인 표시. 새 가입 시 500 시작 보너스 확인.
-- [ ] **#2 상점 구매 UX** — 다크 배경 + 3종 카탈로그 + 잔액 부족 disabled + 구매 모달 + emerald 토스트
-- [ ] **#3 게임 ItemBar** — ControlPad 가운데 세로 3슬롯 + 라벨 + 튜토리얼 1회
-- [ ] **#4 코인만 픽업** — stair에 `?` 박스 없음, 🪙 코인만
-
-### 3. Phase 8 QA — 추가 항목 (혼자 + PvP)
-
-#### 혼자 가능
-- [ ] 봇 매치 → bg.png 배경 + ItemBar 슬롯 + 콤보 단계 시각 효과 + FEVER 펄스
-- [ ] `/shop` 카탈로그 + 슬롯 장착 + `/mode-select` 미리보기
+#### 상점 2탭
+- [ ] 상점 → 부스트 탭 (3종) / 코스메틱 탭 (12종) 전환
+- [ ] 부스트 구매 후 "N판 남음" 표시
+- [ ] 코스메틱 구매 후 "✓ 장착 중" 표시
+- [ ] 잔액 부족 시 오류 토스트
 
 #### PvP (두 탭/기기 필요)
-- [ ] ranked 매치 → beanstalk/mine/bomb 아이템 동작
-- [ ] 결과 화면 "사용 아이템" 이력
+- [ ] 폭탄: 상대 화면 1.5초 가림
+- [ ] 지뢰: 상대 계단에 💀 + 밟으면 1초 잠금
+- [ ] ⚡ 번개: 상대 입력 2.5초 잠금
+- [ ] ranked 매치에서 상대방 실제 캐릭터 표시
 
-### 4. 옵션 — 코인 부족 시
+### 2. 모바일 QA — M4 기능 (미검증)
+
+- [ ] 홈 화면 하단 **리더보드 위젯** — 닉네임 + 누적 점수 상위 3명
+- [ ] "전체 보기 →" → `/leaderboard` 진입
+- [ ] 주간 / 전체 탭 전환
+- [ ] 게임 화면 우상단 **😊 이모티콘 버튼** (ranked 매치)
+- [ ] 격차 5층 벌어질 때 추월 토스트 1회
+
+### 3. 옵션 — 코인 부족 시
 ```bash
 node scripts/grant-coins.mjs          # 기본 500까지 top-up
 GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
+```
+
+### 4. DB push 필요 (M5 신규 테이블)
+
+Task 1에서 schema.ts에 `user_boosts` 테이블 + `users.character_id` 추가됨.
+아직 `pnpm db:push` 미실행이면 실행 필요:
+```bash
+pnpm db:push
 ```
 
 ---
@@ -194,6 +226,44 @@ GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
 - working tree clean
 - prod 배포: https://yuhan-stairs.vercel.app — Vercel auto-deploy 완료
 - 이번 세션 신규 commits: **12개** (`3b4e5b1` spec → `d0767c7` task-log)
+
+---
+
+## History — 2026-06-13 (룰렛 UI 개선 + 모드 전체 활성화)
+
+세션 주제: 게임 중 아이템 박스 룰렛 UI 개선 (전체화면 오버레이 → 상단 슬라이드 배너) + 모드 선택 200/300/500/800층 활성화. 총 **3개 커밋** (`0cefac1 → 2fe81e7`).
+
+### 작업 흐름
+
+1. **RouletteOverlay 전체화면 오버레이 → 상단 배너** (`0cefac1`)
+   - 문제: `fixed inset-0 bg-black/50` 오버레이가 전체 게임 화면을 가려서 계단 방향이 안 보임.
+   - 디자인 3안 비교(우상단 미니 위젯 / 상단 슬라이드 배너 / 우측 세로 슬롯) → 사용자 **B(상단 슬라이드 배너)** 선택.
+   - 변경: `fixed inset-0 bg-black/50` → `absolute inset-x-0 top-[70px]` (HUD 아래 배치).
+   - 슬라이드 인/아웃 애니메이션: 마운트 시 `rAF`로 `-translate-y-full → translate-y-0`, 발동 0.6초 후 다시 슬라이드업 → `onDone()` 호출.
+   - 배너 내 4개 이모지 가로 줄 배치: 현재 활성 이모지는 `text-2xl opacity-100`, 나머지는 `text-sm opacity-30`.
+   - 발동 후 레이블: "아이템 획득 중..." → "✨ {name} 발동!".
+
+2. **배너 이모지 중앙 정렬 fix** (`74c3a3e`)
+   - 문제: 배너 내용이 왼쪽에 쏠려 보임.
+   - 수정: 배너 컨테이너에 `justify-center` 추가.
+
+3. **모드 선택 200/300/500/800층 활성화 + 라벨** (`2fe81e7`)
+   - 문제: `disabled={m !== 100}` 처리로 100층 외 버튼 클릭 불가 (M2 플래그 잔재).
+   - 서버·스테어 제너레이터는 모든 모드를 이미 지원(`MODES`, `MODE_TIMEOUT_MS`, `COIN_REWARDS` 전부 정의됨) → disabled 제거.
+   - 라벨: `100층(점심값내기) / 200층(선물사주기) / 300층(해외여행) / 500층(차사주기) / 800층(집사주기)`.
+
+### 주요 결정 사항
+
+- **전체화면 오버레이 제거**: 이제 게임 진행을 보면서 룰렛 결과 확인 가능. `pointer-events-none`이라 조작도 차단 없음.
+- **HUD 높이 70px**: `py-3`(12px×2) + `text-2xl` 콘텐츠(~46px) = 약 70px. 하드코딩 `top: 70px` 사용.
+- **모드 라벨은 사용자 제공**: 100~800층 각 판돈 개념으로 게임 재미 강화.
+
+### 세션 종료 시 git 상태
+
+- **origin/main = HEAD = `2fe81e7`** (push 완료)
+- working tree clean (task-log 제외)
+- prod 배포: https://yuhan-stairs.vercel.app — Vercel auto-deploy 진행 중
+- 이번 세션 신규 commits: **3개** (`0cefac1`, `74c3a3e`, `2fe81e7`)
 
 ---
 
