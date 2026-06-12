@@ -54,7 +54,7 @@ export function RouletteOverlay({ result, onDone }: Props) {
       className={`pointer-events-none absolute inset-x-0 z-20 transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
       style={{ top: '70px' }}
     >
-      <div className="flex items-center gap-3 border-b-2 border-blue-400/50 bg-slate-900/90 px-4 py-2 backdrop-blur-sm">
+      <div className="flex items-center justify-center gap-3 border-b-2 border-blue-400/50 bg-slate-900/90 px-4 py-2 backdrop-blur-sm">
         {/* cycling emoji row */}
         <div className="flex items-center gap-2">
           {ITEMS.map((item, i) => (
