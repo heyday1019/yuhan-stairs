@@ -12,14 +12,19 @@ export default function ModeSelectPage() {
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-slate-950 p-6 text-white">
       <h2 className="text-xl font-bold">모드 선택</h2>
 
-      {[100, 200, 300, 500, 800].map((m) => (
+      {([
+        [100, '점심값내기'],
+        [200, '선물사주기'],
+        [300, '해외여행'],
+        [500, '차사주기'],
+        [800, '집사주기'],
+      ] as [number, string][]).map(([m, label]) => (
         <button
           key={m}
-          disabled={m !== 100}
           onClick={() => onStart(m)}
-          className="w-64 rounded-2xl bg-amber-400 px-6 py-4 text-lg font-extrabold text-amber-900 disabled:bg-slate-700 disabled:text-slate-500"
+          className="w-64 rounded-2xl bg-amber-400 px-6 py-4 text-lg font-extrabold text-amber-900"
         >
-          {m}층 {m === 100 && '(점심값내기)'} {m !== 100 && '— M2'}
+          {m}층 ({label})
         </button>
       ))}
     </main>
