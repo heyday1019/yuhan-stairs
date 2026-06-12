@@ -9,34 +9,39 @@ const ITEMS = [
 ] as const;
 
 interface Props {
-  result: string;          // 확정된 아이템 id
-  onDone: () => void;      // 애니메이션 완료 콜백
+  result: string;
+  onDone: () => void;
 }
 
 export function RouletteOverlay({ result, onDone }: Props) {
   const [displayIdx, setDisplayIdx] = useState(0);
   const [done, setDone] = useState(false);
+  const [visible, setVisible] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startRef = useRef(performance.now());
   const DURATION_MS = 700;
+
+  // slide-in on mount
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     startRef.current = performance.now();
     let idx = 0;
     intervalRef.current = setInterval(() => {
       const elapsed = performance.now() - startRef.current;
-      const t = Math.min(elapsed / DURATION_MS, 1);
-      // ease-out: 초기 빠름 → 감속
-      const interval = 60 + t * 200;
       idx = (idx + 1) % ITEMS.length;
       setDisplayIdx(idx);
       if (elapsed >= DURATION_MS) {
-        // 결과 아이템으로 고정
         const resultIdx = ITEMS.findIndex((i) => i.id === result);
         setDisplayIdx(resultIdx >= 0 ? resultIdx : 0);
         setDone(true);
         if (intervalRef.current) clearInterval(intervalRef.current);
-        setTimeout(onDone, 350);
+        // slide out then fire onDone
+        setTimeout(() => setVisible(false), 600);
+        setTimeout(onDone, 950);
       }
     }, 80);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
@@ -45,15 +50,32 @@ export function RouletteOverlay({ result, onDone }: Props) {
   const current = ITEMS[displayIdx];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
-        className={`flex flex-col items-center gap-2 rounded-2xl bg-slate-800 px-10 py-8 shadow-2xl transition-transform ${done ? 'scale-110' : 'scale-100'}`}
-      >
-        <div className={`text-7xl transition-transform duration-100 ${done ? 'scale-125' : ''}`}>
-          {current.emoji}
+    <div
+      className={`pointer-events-none absolute inset-x-0 z-20 transition-transform duration-300 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      style={{ top: '70px' }}
+    >
+      <div className="flex items-center gap-3 border-b-2 border-blue-400/50 bg-slate-900/90 px-4 py-2 backdrop-blur-sm">
+        {/* cycling emoji row */}
+        <div className="flex items-center gap-2">
+          {ITEMS.map((item, i) => (
+            <span
+              key={item.id}
+              className={`transition-all duration-75 ${i === displayIdx ? 'text-2xl opacity-100' : 'text-sm opacity-30'}`}
+            >
+              {item.emoji}
+            </span>
+          ))}
         </div>
-        <div className="text-lg font-bold text-white">{current.label}</div>
-        {done && <div className="text-xs text-amber-300">발동!</div>}
+        {/* divider */}
+        <div className="h-5 w-px bg-slate-600" />
+        {/* label */}
+        <div className="text-xs font-bold">
+          {done ? (
+            <span className="text-amber-300">✨ {current.label} 발동!</span>
+          ) : (
+            <span className="text-slate-400">아이템 획득 중...</span>
+          )}
+        </div>
       </div>
     </div>
   );
