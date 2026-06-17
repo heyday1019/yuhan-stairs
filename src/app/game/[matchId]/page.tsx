@@ -10,7 +10,6 @@ import { WaitingOpponent } from '@/components/WaitingOpponent';
 import { RouletteOverlay } from '@/components/RouletteOverlay';
 import { hasBoxAtFloor, pickRandomItem } from '@/game/box-spawn';
 import type { BoostId } from '@/shared/shop-catalog';
-import { LIGHTNING_DURATION_MS } from '@/shared/constants';
 import { BombOverlay } from '@/components/BombOverlay';
 import { ParallaxLayers } from '@/components/ParallaxLayers';
 import { FeverOverlay } from '@/components/FeverOverlay';
@@ -303,6 +302,7 @@ export default function GamePage() {
     let lastPlayerFloor = 0;
     let lastOpponentFloor = 0;
     let lastMinesKey = '';
+    let lastBoxFloorInPixi = -1;
     app.ticker.add(() => {
       const now = performance.now();
       const state = useGame.getState();
@@ -318,16 +318,18 @@ export default function GamePage() {
 
       const mineSet = new Set(mines);
       const mineKey = [...mines].sort((a, b) => a - b).join(',');
-      if (mineKey !== lastMinesKey) {
-        // Rebuild any already-rendered stair so newly placed mines show up.
+      const boxFloor = lastBoxFloorRef.current;
+      if (mineKey !== lastMinesKey || boxFloor !== lastBoxFloorInPixi) {
+        // Rebuild rendered stairs when mines change or a box is collected (to clear stale ? marker).
         for (const [f, node] of stairContainers) {
           const stair = curStairs[f - 1];
           if (!stair) continue;
           world.removeChild(node);
           node.destroy({ children: true });
-          stairContainers.set(f, renderStair(world, stair, textures.stair, { isMine: mineSet.has(f), isBox: hasBoxAtFloor(f, oppFloor, lastBoxFloorRef.current) }));
+          stairContainers.set(f, renderStair(world, stair, textures.stair, { isMine: mineSet.has(f), isBox: hasBoxAtFloor(f, oppFloor, boxFloor) }));
         }
         lastMinesKey = mineKey;
+        lastBoxFloorInPixi = boxFloor;
       }
 
       const anchorFloor = Math.max(1, curFloor);
