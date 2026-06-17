@@ -10,88 +10,38 @@
 
 ## 다음 진행할 작업 (2026-06-17)
 
-**코드 cleanup + 박스 마커 버그 수정 완료**. HEAD = `0f9244e`. prod push 필요.
+**cleanup + 박스 마커 버그 수정 + push 완료**. HEAD = `0e82dca`. prod 배포 중 → https://yuhan-stairs.vercel.app
 
 ### 0. 세션 시작 체크
-- `git log --oneline -5`: HEAD = `0f9244e` 확인
+- `git log --oneline -5`: HEAD = `0e82dca` 확인
 - `git status`: clean 확인
-- `pnpm test`: 115 passed ✅
-- `pnpm exec tsc --noEmit`: exit 0 ✅
 
-### 1. prod push
-```bash
-git push origin main
-```
-
-### 2. M4/M5 QA (미검증 항목) — 모바일에서 진행
+### 1. M4/M5 QA — 모바일에서 진행 (하드 새로고침 후)
 
 #### M5 QA (룰렛 · 상점)
+- [ ] 게임 중 `?` 박스가 계단에 나타남 (격차에 따라 빈도 변화)
 - [ ] 박스 밟으면 **상단 슬라이드 배너** 등장 (HUD 아래에서 내려오는 애니메이션)
 - [ ] 배너 내 이모지 4개가 가운데 정렬로 빠르게 전환 → 결과 아이템 확대 + "발동!"
-- [ ] 박스 수집 후 `?` 마커가 즉시 사라지는지 (오늘 fix)
-- [ ] 덩굴콩 +5층 / 폭탄·지뢰·번개 서버 발동
-- [ ] 200/300/500/800층 모드 버튼 클릭 및 게임 진입 확인
-
-#### M4 QA (미검증)
-- [ ] 홈 화면 리더보드 위젯
-- [ ] 이모티콘 버튼 (ranked)
-- [ ] 추월 토스트
-
----
-
-## 다음 진행할 작업 (2026-06-12 세션 2)
-
-**M5 코드 완료 + push 완료**. HEAD = `0c065c8`. prod 배포 완료 → https://yuhan-stairs.vercel.app
-
-### 0. 세션 시작 체크 ✅ (2026-06-12 완료)
-- `git log --oneline -5`: HEAD = `0c065c8` ✅
-- `git status`: clean ✅
-- `pnpm test`: 115 passed ✅
-- `pnpm exec tsc --noEmit`: exit 0 ✅
-- `pnpm db:push`: "No changes detected" — M5 신규 테이블 이미 Neon에 적용됨 ✅
-
-### 1. 모바일 QA — M5 신규 기능 (최우선)
-
-배포 후 **하드 새로고침**. 통과/실패 보고하면 task-log 마크업.
-
-#### 박스 & 룰렛
-- [ ] 게임 중 `?` 박스가 계단에 나타남 (격차에 따라 빈도 변화)
-- [ ] 박스 밟으면 RouletteOverlay 등장 (~0.7초 애니메이션)
-- [ ] 룰렛 완료 즉시 아이템 발동
+- [ ] 박스 수집 후 `?` 마커 즉시 사라짐 확인 (2026-06-17 fix)
 - [ ] 덩굴콩: 즉시 +5층
-
-#### 상점 2탭
+- [ ] 폭탄·지뢰·번개: 서버 발동 (PvP, 두 탭/기기 필요)
 - [ ] 상점 → 부스트 탭 (3종) / 코스메틱 탭 (12종) 전환
 - [ ] 부스트 구매 후 "N판 남음" 표시
 - [ ] 코스메틱 구매 후 "✓ 장착 중" 표시
 - [ ] 잔액 부족 시 오류 토스트
-
-#### PvP (두 탭/기기 필요)
-- [ ] 폭탄: 상대 화면 1.5초 가림
-- [ ] 지뢰: 상대 계단에 💀 + 밟으면 1초 잠금
-- [ ] ⚡ 번개: 상대 입력 2.5초 잠금
 - [ ] ranked 매치에서 상대방 실제 캐릭터 표시
+- [ ] 200/300/500/800층 모드 버튼 클릭 및 게임 진입
 
-### 2. 모바일 QA — M4 기능 (미검증)
-
+#### M4 QA (미검증)
 - [ ] 홈 화면 하단 **리더보드 위젯** — 닉네임 + 누적 점수 상위 3명
-- [ ] "전체 보기 →" → `/leaderboard` 진입
-- [ ] 주간 / 전체 탭 전환
+- [ ] "전체 보기 →" → `/leaderboard` 진입 + 주간/전체 탭 전환
 - [ ] 게임 화면 우상단 **😊 이모티콘 버튼** (ranked 매치)
 - [ ] 격차 5층 벌어질 때 추월 토스트 1회
 
-### 3. 옵션 — 코인 부족 시
+### 2. 옵션 — 코인 부족 시
 ```bash
 node scripts/grant-coins.mjs          # 기본 500까지 top-up
 GRANT_MIN_COINS=2000 node scripts/grant-coins.mjs
-```
-
-### 4. DB push 필요 (M5 신규 테이블)
-
-Task 1에서 schema.ts에 `user_boosts` 테이블 + `users.character_id` 추가됨.
-아직 `pnpm db:push` 미실행이면 실행 필요:
-```bash
-pnpm db:push
 ```
 
 ---
@@ -109,8 +59,8 @@ pnpm db:push
 - [ ] **아이템 아이콘 PNG** (선택) — 현재 이모지(💣💥🌱💀)로 동작. 나중에 `public/sprites/items/` 64×64 PNG로 교체 시 `items-catalog.ts`의 emoji 필드 보강.
 - [ ] **bg.png 다른 페이지에도 적용?** — 현재는 /game만. 홈/매칭/결과에도 깔지 결정 (UI 가독성 테스트 필요).
 - [ ] **Vercel 대시보드에서 Pusher 6개 env BOM 재등록** (이전 세션 미완료) — [[feedback-vercel-cli-agent-preview]] 참조
-- [ ] **상대방 실제 캐릭터 표시** — 지금은 고정 `crystal-tophat` fallback. 옵션 A (Redis match payload에 character 추가) vs 옵션 B (DB users.character_id 컬럼). M4 또는 별도 마일스톤.
-- [ ] **마리오 카트 스타일 아이템 박스** (사용자 제안 2026-05-21) — 현재 3슬롯 픽업/구매/장착 모델을 갈아엎고 "픽업 → 룰렛 회전 → 클릭 시 랜덤 아이템 투척" 메카닉. M5 brainstorming 후보.
+- [x] ~~**상대방 실제 캐릭터 표시**~~ — M5에서 `users.character_id` 컬럼 + `match_ready` payload에 `opponentCharId` 포함으로 완료 (2026-06-12)
+- [x] ~~**마리오 카트 스타일 아이템 박스**~~ — M5로 구현 완료 (박스 픽업 → 룰렛 → 즉시 발동, 2026-06-12)
 
 ---
 
@@ -237,29 +187,39 @@ pnpm db:push
 
 ---
 
-## History — 2026-06-17 (dead code 정리 + 박스 마커 버그 수정)
+## History — 2026-06-17 (dead code 정리 + 박스 마커 버그 수정 + push)
 
-세션 주제: M5 코드 완성 후 cleanup. 총 **1개 커밋** (`0f9244e`).
+세션 주제: task-log/plan 파일 기반 현황 파악 → 코드 품질 점검 → cleanup + 버그 수정 → push. 총 **2개 커밋** (`0f9244e`, `0e82dca`).
 
 ### 작업 흐름
 
-1. **코드 상태 점검**: 115 tests passed, tsc exit 0 확인
-2. **dead code 삭제** (`0f9244e`):
-   - `src/server/items.ts` — M3 아이템 장착/사용 로직, M5에서 `box/activate`로 대체되어 아무 곳에서도 import 안 됨
-   - `src/components/ShopItemCard.tsx` — M3 상점 카드 컴포넌트, M5 상점 페이지 전면 교체로 불필요
-3. **박스 마커 시각 버그 수정** (`0f9244e`):
-   - 증상: `?` 박스 밟고 룰렛 완료 후에도 해당 계단에 `?` 마커가 남아있음
-   - Root cause: Pixi ticker의 stair rebuild이 mine 변경 시에만 발생. `lastBoxFloorRef`가 업데이트돼도 rebuild 트리거 없음
-   - Fix: `lastBoxFloorInPixi` 로컬 변수 추가. `boxFloor !== lastBoxFloorInPixi` 조건을 기존 mine 체크에 OR로 연결
-4. **미사용 import 제거** (`0f9244e`): `LIGHTNING_DURATION_MS` → `box/activate` route에서만 사용, game page import 불필요
+1. **현황 파악**: task-log + M5 plan 파일 리뷰. M5 Tasks 1-17 모두 완료, 남은 작업은 모바일 QA임을 확인
+2. **코드 상태 점검** (`pnpm test`: 115 passed, `tsc --noEmit`: exit 0)
+3. **코드 리뷰 중 발견한 3가지 문제**:
+   - `src/server/items.ts` — M3 아이템 장착/사용 로직. M5에서 `box/activate`로 대체됐으나 삭제 누락. 아무 곳에서도 import 안 됨
+   - `src/components/ShopItemCard.tsx` — M3 상점 카드 컴포넌트. M5 상점 페이지 전면 교체로 불필요. 아무 곳에서도 import 안 됨
+   - `?` 박스 마커 시각 버그: 박스 밟고 룰렛 완료 후에도 해당 계단에 `?` 마커가 잔존
+4. **dead code 삭제 + 박스 마커 버그 수정** (`0f9244e`):
+   - `src/server/items.ts`, `src/components/ShopItemCard.tsx` 삭제
+   - `onPixiReady` 내 Pixi ticker에 `lastBoxFloorInPixi` 로컬 변수 추가. `mineKey !== lastMinesKey || boxFloor !== lastBoxFloorInPixi` 조건으로 stair rebuild 트리거 확장. 박스 수집 즉시 `?` 마커 소거
+   - `LIGHTNING_DURATION_MS` 미사용 import 제거 (game page → `box/activate` route에서만 실제 사용)
+5. **task-log 업데이트 + push** (`0e82dca`): `git push origin main` 완료
 
-### 주요 결정 사항
-- **stair rebuild는 mine 변경 패턴과 동일**: mine 변경 시 전체 visible stair rebuild, 박스 수집 시도 동일. 부하는 ~20 stair 재생성으로 경미
+### 주요 발견 / 결정
+
+- **Pixi stair rebuild 패턴**: mine 변경 시 visible stair 전체 rebuild 로직이 이미 있음. 박스 수집도 동일 패턴으로 3줄 추가로 해결 — 새 추상화 불필요
+- **M5 deletion list에 누락**: M5 plan Task 17의 삭제 목록이 `ItemBar`, `SlotPicker`, API routes만 포함. server-side `items.ts`와 `ShopItemCard` 는 목록에 없었으나 실제로는 미사용 상태였음
+- **사용자 작업 백로그 2개 완료 처리**: "상대방 실제 캐릭터 표시"와 "마리오 카트 스타일 아이템 박스" — 각각 M5에서 구현 완료
+
+### 테스트 상태
+- `pnpm test`: **115 passed (21 test files)** — 변경 후 확인
+- `pnpm exec tsc --noEmit`: exit 0
 
 ### 세션 종료 시 git 상태
-- **HEAD = `0f9244e`** (push 미완료)
-- working tree clean (task-log 제외)
-- 이번 세션 신규 commits: **1개** (`0f9244e`)
+- **origin/main = HEAD = `0e82dca`** (push 완료)
+- working tree clean
+- prod 배포: https://yuhan-stairs.vercel.app — Vercel auto-deploy 진행
+- 이번 세션 신규 commits: **2개** (`0f9244e`, `0e82dca`)
 
 ---
 
