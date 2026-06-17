@@ -8,19 +8,27 @@
 
 ---
 
-## 다음 진행할 작업 (2026-06-13)
+## 다음 진행할 작업 (2026-06-17)
 
-**M5 코드 + 룰렛 UI 개선 + 모드 활성화 완료**. HEAD = `2fe81e7`. prod 배포 완료 → https://yuhan-stairs.vercel.app
+**코드 cleanup + 박스 마커 버그 수정 완료**. HEAD = `0f9244e`. prod push 필요.
 
 ### 0. 세션 시작 체크
-- `git log --oneline -5`: HEAD = `2fe81e7` 확인
+- `git log --oneline -5`: HEAD = `0f9244e` 확인
 - `git status`: clean 확인
+- `pnpm test`: 115 passed ✅
+- `pnpm exec tsc --noEmit`: exit 0 ✅
 
-### 1. M4/M5 QA 계속 (미검증 항목)
+### 1. prod push
+```bash
+git push origin main
+```
+
+### 2. M4/M5 QA (미검증 항목) — 모바일에서 진행
 
 #### M5 QA (룰렛 · 상점)
 - [ ] 박스 밟으면 **상단 슬라이드 배너** 등장 (HUD 아래에서 내려오는 애니메이션)
 - [ ] 배너 내 이모지 4개가 가운데 정렬로 빠르게 전환 → 결과 아이템 확대 + "발동!"
+- [ ] 박스 수집 후 `?` 마커가 즉시 사라지는지 (오늘 fix)
 - [ ] 덩굴콩 +5층 / 폭탄·지뢰·번개 서버 발동
 - [ ] 200/300/500/800층 모드 버튼 클릭 및 게임 진입 확인
 
@@ -226,6 +234,32 @@ pnpm db:push
 - working tree clean
 - prod 배포: https://yuhan-stairs.vercel.app — Vercel auto-deploy 완료
 - 이번 세션 신규 commits: **12개** (`3b4e5b1` spec → `d0767c7` task-log)
+
+---
+
+## History — 2026-06-17 (dead code 정리 + 박스 마커 버그 수정)
+
+세션 주제: M5 코드 완성 후 cleanup. 총 **1개 커밋** (`0f9244e`).
+
+### 작업 흐름
+
+1. **코드 상태 점검**: 115 tests passed, tsc exit 0 확인
+2. **dead code 삭제** (`0f9244e`):
+   - `src/server/items.ts` — M3 아이템 장착/사용 로직, M5에서 `box/activate`로 대체되어 아무 곳에서도 import 안 됨
+   - `src/components/ShopItemCard.tsx` — M3 상점 카드 컴포넌트, M5 상점 페이지 전면 교체로 불필요
+3. **박스 마커 시각 버그 수정** (`0f9244e`):
+   - 증상: `?` 박스 밟고 룰렛 완료 후에도 해당 계단에 `?` 마커가 남아있음
+   - Root cause: Pixi ticker의 stair rebuild이 mine 변경 시에만 발생. `lastBoxFloorRef`가 업데이트돼도 rebuild 트리거 없음
+   - Fix: `lastBoxFloorInPixi` 로컬 변수 추가. `boxFloor !== lastBoxFloorInPixi` 조건을 기존 mine 체크에 OR로 연결
+4. **미사용 import 제거** (`0f9244e`): `LIGHTNING_DURATION_MS` → `box/activate` route에서만 사용, game page import 불필요
+
+### 주요 결정 사항
+- **stair rebuild는 mine 변경 패턴과 동일**: mine 변경 시 전체 visible stair rebuild, 박스 수집 시도 동일. 부하는 ~20 stair 재생성으로 경미
+
+### 세션 종료 시 git 상태
+- **HEAD = `0f9244e`** (push 미완료)
+- working tree clean (task-log 제외)
+- 이번 세션 신규 commits: **1개** (`0f9244e`)
 
 ---
 
